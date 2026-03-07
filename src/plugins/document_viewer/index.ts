@@ -2,11 +2,15 @@ import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { requireAuth } from '../../core/auth';
-import { url } from '../../app';
+import { makeDocUploader } from '../../core/upload';
+
+const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, '');
+const url = (p: string) => `${BASE}${p}`;
 
 const router = Router();
-const DOC_ROOT = process.env.DOCS_ROOT ?? path.join(process.env.HOME ?? '/home/node', '.openclaw', 'workspace');
-const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py']);
+const DOC_ROOT = '/home/node/.openclaw/workspace';
+const UPLOAD_DIR = '/home/node/.openclaw/workspace/uploads/docs';
+const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py', '.pdf', '.html', '.htm']);
 
 function safeJoin(base: string, rel: string): string | null {
   const full = path.resolve(base, rel);
@@ -24,7 +28,7 @@ function layout(title: string, body: string): string {
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh}
   .header{background:#16213e;border-bottom:1px solid #0f3460;padding:12px 24px;
-          display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+          display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:52px}
   .header a{color:#e94560;text-decoration:none;font-size:.9em}
   .header a:hover{text-decoration:underline}
   .sep{color:#555}
@@ -69,10 +73,31 @@ router.get('/', requireAuth, (req, res) => {
 
   const items = entries.map(e => {
     const childRel = rel ? `${rel}/${e.name}` : e.name;
+    const ext = path.extname(e.name).toLowerCase();
+    const isPdf = ext === '.pdf';
     const href = e.isDir
       ? `${url('/docs')}?path=${encodeURIComponent(childRel)}`
-      : `${url('/docs/view')}?path=${encodeURIComponent(childRel)}`;
-    return `<li><a href="${href}"><span>${e.isDir ? '📁' : '📄'}</span>${e.name}${e.isDir ? '/' : ''}</a></li>`;
+      : isPdf
+        ? `${url('/docs/raw')}?path=${encodeURIComponent(childRel)}`
+        : `${url('/docs/view')}?path=${encodeURIComponent(childRel)}`;
+    const linkAttr = isPdf ? `target="_blank"` : '';
+    const delBtn = !e.isDir
+      ? `<form method="post" action="${url('/docs/delete')}" style="margin-left:auto;display:flex"
+           onsubmit="return confirm('「${e.name}」を削除しますか？\\nこの操作は元に戻せません。');event.stopPropagation()">
+           <input type="hidden" name="path" value="${childRel}">
+           <input type="hidden" name="back" value="${rel}">
+           <button type="submit" title="削除"
+             style="padding:3px 8px;background:transparent;color:#555;border:1px solid #333;border-radius:4px;font-size:.78em;cursor:pointer"
+             onmouseenter="this.style.color='#e94560';this.style.borderColor='#660020'"
+             onmouseleave="this.style.color='#555';this.style.borderColor='#333'">🗑</button>
+         </form>`
+      : '';
+    return `<li style="display:flex;align-items:center">
+      <a href="${href}" ${linkAttr} style="display:flex;align-items:center;gap:10px;flex:1;padding:8px 0;color:#e0e0e0;text-decoration:none">
+        <span>${e.isDir ? '📁' : isPdf ? '📑' : '📄'}</span>${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}
+      </a>
+      ${delBtn}
+    </li>`;
   }).join('');
 
   const body = `
@@ -80,6 +105,9 @@ router.get('/', requireAuth, (req, res) => {
       <a href="${url('/')}">🏭 labo-portal</a>
       <span class="sep">›</span>
       <span class="bc">${crumbs}</span>
+      <span style="flex:1"></span>
+      <a href="${url('/docs/upload')}${rel ? '?path=' + encodeURIComponent(rel) : ''}"
+        style="padding:6px 14px;background:#e94560;color:#fff;border-radius:5px;text-decoration:none;font-size:.82em;font-weight:600">📤 アップロード</a>
     </div>
     <div class="main">
       <ul class="dir-list">${items || '<li style="color:#888;padding:12px 0">（空のディレクトリ）</li>'}</ul>
@@ -97,6 +125,11 @@ router.get('/view', requireAuth, (req, res) => {
   const ext = path.extname(full).toLowerCase();
   if (!ALLOWED_EXTS.has(ext)) return res.status(403).send('Forbidden');
 
+  // PDFはrawで新タブ表示
+  if (ext === '.pdf') {
+    return res.redirect(`${url('/docs/raw')}?path=${encodeURIComponent(rel)}`);
+  }
+
   const filename = path.basename(full);
   const dirRel = path.dirname(rel);
   const rawContent = fs.readFileSync(full, 'utf-8');
@@ -109,6 +142,17 @@ router.get('/view', requireAuth, (req, res) => {
       <a class="bc" href="${url('/docs')}?path=${encodeURIComponent(dirRel)}">${dirRel}</a>
       <span class="sep">›</span>
       <span>${filename}</span>
+      <span style="flex:1"></span>
+      <a href="${url('/docs/raw')}?path=${encodeURIComponent(rel)}" download="${filename}"
+        style="padding:6px 14px;background:#0f3460;color:#8be9fd;border-radius:5px;text-decoration:none;font-size:.82em;font-weight:600">⬇ DL</a>
+      <span style="flex:1"></span>
+      <form method="post" action="${url('/docs/delete')}" style="display:inline"
+        onsubmit="return confirm('「${filename}」を削除しますか？\\nこの操作は元に戻せません。')">
+        <input type="hidden" name="path" value="${rel}">
+        <input type="hidden" name="back" value="${dirRel}">
+        <button type="submit"
+          style="padding:6px 14px;background:#3a0010;color:#e94560;border:1px solid #660020;border-radius:5px;font-size:.82em;font-weight:600;cursor:pointer">🗑 削除</button>
+      </form>
     </div>
     <div class="main">
       ${ext === '.md'
@@ -121,10 +165,112 @@ router.get('/view', requireAuth, (req, res) => {
   res.send(layout(filename, body));
 });
 
+// ファイル削除
+router.post('/delete', requireAuth, (req, res) => {
+  const rel = (req.body.path ?? '').replace(/\.\./g, '').replace(/^\//, '');
+  const back = (req.body.back ?? '').replace(/\.\./g, '').replace(/^\//, '');
+  const full = safeJoin(DOC_ROOT, rel);
+  if (full && fs.existsSync(full) && !fs.statSync(full).isDirectory()) {
+    const ext = path.extname(full).toLowerCase();
+    if (ALLOWED_EXTS.has(ext)) fs.unlinkSync(full);
+  }
+  res.redirect(`${url('/docs')}?path=${encodeURIComponent(back)}`);
+});
+
+// 生ファイル配信（ダウンロード用）
+router.get('/raw', requireAuth, (req, res) => {
+  const rel = (req.query.path as string ?? '').replace(/\.\./g, '').replace(/^\//, '');
+  const full = safeJoin(DOC_ROOT, rel);
+  if (!full || !fs.existsSync(full)) return res.status(404).send('Not found');
+  const ext = path.extname(full).toLowerCase();
+  if (!ALLOWED_EXTS.has(ext)) return res.status(403).send('Forbidden');
+  res.setHeader('Content-Disposition', `attachment; filename="${path.basename(full)}"`);
+  res.sendFile(full);
+});
+
+// アップロード
+const docUpload = makeDocUploader(UPLOAD_DIR);
+
+router.get('/upload', requireAuth, (req, res) => {
+  const destPath = req.query.path as string ?? '';
+  res.send(layout('アップロード', `
+    <div class="header">
+      <a href="${url('/')}">🏭 labo-portal</a>
+      <span class="sep">›</span>
+      <a href="${url('/docs')}">📄 ドキュメント</a>
+      <span class="sep">›</span>
+      <span>アップロード</span>
+    </div>
+    <div class="main" style="max-width:600px">
+      <h2 style="color:#e94560;margin-bottom:24px">📤 ドキュメントアップロード</h2>
+      <form method="post" action="${url('/docs/upload')}${destPath ? '?path=' + encodeURIComponent(destPath) : ''}" enctype="multipart/form-data" id="uploadForm">
+        <div id="dropZone" style="border:2px dashed #0f3460;border-radius:8px;padding:48px 32px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s">
+          <div style="font-size:2.5em;margin-bottom:12px">📄</div>
+          <p style="color:#aaa;margin-bottom:8px">ここにファイルをドロップ</p>
+          <p style="color:#555;font-size:.82em;margin-bottom:16px">または</p>
+          <label style="padding:8px 20px;background:#0f3460;color:#8be9fd;border-radius:6px;cursor:pointer;font-weight:600">
+            ファイルを選択
+            <input type="file" name="file" id="fileInput" accept=".txt,.md,.pdf,.html,.htm" required style="display:none">
+          </label>
+          <p id="fname" style="margin-top:14px;color:#8be9fd;font-size:.9em;min-height:1.2em"></p>
+          <p style="color:#555;font-size:.78em;margin-top:8px">許可形式: .txt .md .pdf .html（最大5MB）</p>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:12px;align-items:center">
+          <button type="submit" id="submitBtn"
+            style="padding:10px 24px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:1em;font-weight:600;cursor:pointer">アップロード</button>
+          <a href="${url('/docs')}${destPath ? '?path=' + encodeURIComponent(destPath) : ''}" style="color:#888;text-decoration:none">キャンセル</a>
+        </div>
+      </form>
+      <script>
+        const drop = document.getElementById('dropZone');
+        const input = document.getElementById('fileInput');
+        const fname = document.getElementById('fname');
+        const form = document.getElementById('uploadForm');
+
+        input.onchange = () => { if (input.files[0]) fname.textContent = input.files[0].name; };
+
+        drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor='#e94560'; drop.style.background='rgba(233,69,96,.05)'; });
+        drop.addEventListener('dragleave', () => { drop.style.borderColor='#0f3460'; drop.style.background=''; });
+        drop.addEventListener('drop', e => {
+          e.preventDefault();
+          drop.style.borderColor='#0f3460'; drop.style.background='';
+          const file = e.dataTransfer.files[0];
+          if (!file) return;
+          const dt = new DataTransfer(); dt.items.add(file);
+          input.files = dt.files;
+          fname.textContent = file.name;
+        });
+        drop.addEventListener('click', e => { if (e.target === drop || e.target.tagName === 'P' || e.target.tagName === 'DIV') input.click(); });
+        form.onsubmit = () => { document.getElementById('submitBtn').textContent = 'アップロード中...'; };
+      </script>
+    </div>`));
+});
+
+router.post('/upload', requireAuth, (req, res) => {
+  docUpload.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).send(layout('エラー', `
+        <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/docs')}">📄 ドキュメント</a></div>
+        <div class="main">
+          <p style="color:#e94560;background:#1a0010;border:1px solid #e94560;border-radius:6px;padding:12px">${err.message}</p>
+          <p style="margin-top:12px"><a href="${url('/docs/upload')}" style="color:#e94560">← 戻る</a></p>
+        </div>`));
+    }
+    const f = (req as any).file;
+    res.send(layout('完了', `
+      <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/docs')}">📄 ドキュメント</a></div>
+      <div class="main">
+        <p style="color:#50fa7b;margin-bottom:16px">✅ アップロード完了: ${f.filename}</p>
+        <p><a href="${url('/docs')}?path=uploads/docs" style="color:#8be9fd">アップロードフォルダを開く</a>
+        &nbsp;&nbsp;<a href="${url('/docs/upload')}" style="color:#888">もう一枚</a></p>
+      </div>`));
+  });
+});
+
 export const meta = {
   name: 'Document Viewer',
   icon: '📄',
-  desc: 'Markdown・テキスト・設定ファイルを表示',
+  desc: 'Markdown・テキスト・設定ファイルを表示＆アップロード',
   layer: 'core' as const,
   url: '/docs',
 };
