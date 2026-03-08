@@ -65,6 +65,25 @@ npm run dev            # http://localhost:8800/mephi/
 | `LABO_AGENT` | エージェント名（ヘッダー表示） | — |
 | `GEMINI_API_KEY` | 画像生成用Gemini APIキー | — |
 
+### ⚠️ 本番デプロイ時の注意
+
+**launchd / systemd 環境では `.env` が自動で読まれない**  
+→ plist や service ファイルに環境変数を直接記載する。
+
+**`node` コマンドがPATHに存在しない場合がある**  
+→ `execFile('node', ...)` ではなく `execFile(process.execPath, ...)` を使う。  
+（labo-portal内部では対処済み）
+
+**古い ts-node プロセスが残っていると `.env` が読まれない**  
+→ デプロイ時は必ず旧プロセスを終了してから起動する。
+```bash
+pkill -f 'ts-node\|node.*app'
+node dist/app.js
+```
+
+**FormData を受け取るエンドポイントには multer が必要**  
+→ ファイルなしのフォームでも `uploader.none()` を忘れずに。
+
 ---
 
 ## 現行プラグイン
