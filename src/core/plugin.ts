@@ -23,8 +23,9 @@ export function loadPlugins(app: Express, pluginsDir: string): void {
   const entries = fs.readdirSync(pluginsDir).sort();
   for (const name of entries) {
     const pluginPath = path.join(pluginsDir, name);
-    const indexFile = path.join(pluginPath, 'index.ts');
-    if (!fs.statSync(pluginPath).isDirectory() || !fs.existsSync(indexFile)) continue;
+    const indexFileTs = path.join(pluginPath, 'index.ts');
+    const indexFileJs = path.join(pluginPath, 'index.js');
+    if (!fs.statSync(pluginPath).isDirectory() || (!fs.existsSync(indexFileTs) && !fs.existsSync(indexFileJs))) continue;
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
