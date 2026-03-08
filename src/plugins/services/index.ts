@@ -80,7 +80,7 @@ ${body}
 }
 
 // GET: ステータス一覧
-router.get('/', requireAuth, async (_req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   // サービスステータス確認
   const statuses = await Promise.all(SERVICES.map(async s => {
     const r = await run(s.check);
@@ -124,6 +124,22 @@ router.get('/', requireAuth, async (_req, res) => {
           <div class="sysinfo-item"><div class="sysinfo-label">ホスト</div><div class="sysinfo-value">${process.env.HOSTNAME ?? 'unknown'}</div></div>
         </div>
       </div>
+      ${req.hostname === 'localhost' ? `
+      <div class="sysinfo" style="margin-top:24px">
+        <h3>🔗 外部ツール</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">
+          <a href="http://localhost:18789" target="_blank"
+            style="display:flex;align-items:center;gap:8px;padding:12px 18px;background:#0d1117;border:1px solid #0f3460;border-radius:8px;text-decoration:none;color:#8be9fd;font-size:.9em;transition:border-color .2s"
+            onmouseover="this.style.borderColor='#e94560'" onmouseout="this.style.borderColor='#0f3460'">
+            🦀 <span><strong>OpenClaw WebUI</strong><br><span style="color:#555;font-size:.8em">:18789</span></span>
+          </a>
+          <a href="http://localhost:3001/docs" target="_blank"
+            style="display:flex;align-items:center;gap:8px;padding:12px 18px;background:#0d1117;border:1px solid #0f3460;border-radius:8px;text-decoration:none;color:#50fa7b;font-size:.9em;transition:border-color .2s"
+            onmouseover="this.style.borderColor='#50fa7b'" onmouseout="this.style.borderColor='#0f3460'">
+            🧬 <span><strong>RAG Admin UI</strong><br><span style="color:#555;font-size:.8em">:3001/docs (Swagger)</span></span>
+          </a>
+        </div>
+      </div>` : ''}
       <p class="refresh"><a href="${url('/services')}" style="color:#888">↻ 更新</a></p>
     </div>`;
 
