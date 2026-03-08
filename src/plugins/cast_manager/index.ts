@@ -118,7 +118,7 @@ function layout(title: string, body: string): string {
 
 function headerHtml(sub?: string): string {
   return `<div class="header">
-    <a href="${url('/')}">🏭 labo-portal</a>
+    <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
     <span class="sep">›</span>
     <a href="${url('/cast_manager')}">🎭 キャスト</a>
     ${sub ? `<span class="sep">›</span><span>${sub}</span>` : ''}
@@ -287,7 +287,7 @@ router.post('/new', requireAuth,
 router.get('/:id/edit', requireAuth, (req, res) => {
   const profile = loadProfile(req.params.id);
   if (!profile) return res.redirect(url('/cast_manager'));
-  const body = `${headerHtml('編集')}<div class="main"><h2>✏️ ${profile.name} を編集</h2>${profileForm('/cast_manager/' + req.params.id + '/edit', profile, req.params.id)}</div>`;
+  const body = `${headerHtml('編集')}<div class="main"><h2> <i class="fas fa-edit"></i> ${profile.name} を編集</h2>${profileForm('/cast_manager/' + req.params.id + '/edit', profile, req.params.id)}</div>`;
   res.send(layout('編集', body));
 });
 

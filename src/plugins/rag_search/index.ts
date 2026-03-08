@@ -122,7 +122,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <span>🔍 RAG検索</span>
     </div>
@@ -241,7 +241,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     const resultBody = `
       <div class="header">
-        <a href="${url('/')}">🏭 labo-portal</a>
+        <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
         <span class="sep">›</span>
         <a href="${url('/rag')}?source=${source}">🔍 RAG検索</a>
       </div>
@@ -274,7 +274,7 @@ router.post('/', requireAuth, async (req, res) => {
   } catch (err: any) {
     const errBody = `
       <div class="header">
-        <a href="${url('/')}">🏭 labo-portal</a>
+        <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
         <span class="sep">›</span>
         <a href="${url('/rag')}?source=${source}">🔍 RAG検索</a>
       </div>

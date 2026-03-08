@@ -139,7 +139,7 @@ function layout(title: string, body: string): string {
 
 function headerHtml(sub?: string): string {
   return `<div class="header">
-    <a href="${url('/')}">🏭 labo-portal</a>
+    <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
     <span class="sep">›</span>
     <a href="${url('/rag_admin')}">🧬 RAG管理</a>
     ${sub ? `<span class="sep">›</span><span>${sub}</span>` : ''}
@@ -280,11 +280,11 @@ router.get('/documents', requireAuth, async (req, res) => {
     const body = `
       ${headerHtml('ドキュメント一覧')}
       <div class="main">
-        <h2>📄 ${collection} <span style="color:#888;font-size:.75em">(${total}件)</span></h2>
+        <h2> <i class="fas fa-file-alt"></i> ${collection} <span style="color:#888;font-size:.75em">(${total}件)</span></h2>
         <div class="tabs">
           <a href="${url('/rag_admin')}" class="tab">📚 コレクション</a>
           <a href="${url('/rag_admin/ingest?collection=' + encodeURIComponent(collection))}" class="tab">📥 投入</a>
-          <span class="tab active">📄 ドキュメント</span>
+          <span class="tab active"> <i class="fas fa-file-alt"></i> ドキュメント</span>
         </div>
         <div class="card">
           <div style="display:flex;flex-direction:column;gap:8px">
@@ -316,7 +316,7 @@ router.get('/edit', requireAuth, async (req, res) => {
     const body = `
       ${headerHtml('編集')}
       <div class="main">
-        <h2>✏️ ドキュメント編集</h2>
+        <h2> <i class="fas fa-edit"></i> ドキュメント編集</h2>
         <p style="color:#555;font-family:monospace;font-size:.8em;margin-bottom:16px">${docId}</p>
         <form method="post" action="${url('/rag_admin/update')}">
           <input type="hidden" name="doc_id" value="${docId}">

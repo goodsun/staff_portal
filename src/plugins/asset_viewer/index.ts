@@ -30,7 +30,7 @@ function getKind(filename: string): AssetKind {
 }
 
 function kindIcon(kind: AssetKind) {
-  return { image: '🖼', video: '🎬', model: '📦', other: '📎' }[kind];
+  return { image: '🖼', video: 'video', model: 'model', other: 'file' }[kind];
 }
 
 function safeJoin(base: string, rel: string): string | null {
@@ -132,7 +132,7 @@ router.get('/', requireAuth, (req, res) => {
 
   const dirItems = dirs.map(e => {
     const childRel = rel ? `${rel}/${e.name}` : e.name;
-    return `<li><a href="${url('/assets')}?path=${encodeURIComponent(childRel)}"><span>📁</span>${e.name}/</a></li>`;
+    return `<li><a href="${url('/assets')}?path=${encodeURIComponent(childRel)}"><span class="icon"><i class="fas fa-folder"></i></span>${e.name}/</a></li>`;
   }).join('');
 
   const fileCards = files.map(e => {
@@ -166,7 +166,7 @@ router.get('/', requireAuth, (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <span class="bc">${crumbs}</span>
     </div>
@@ -214,7 +214,7 @@ router.get('/view', requireAuth, (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <a class="bc" href="${url('/assets')}?path=${encodeURIComponent(dirRel)}">${dirRel || 'assets'}</a>
       <span class="sep">›</span>
@@ -245,7 +245,7 @@ router.get('/view', requireAuth, (req, res) => {
           <input type="hidden" name="path" value="${rel}">
           <input type="hidden" name="back" value="${dirRel}">
           <button type="submit"
-            style="padding:8px 18px;background:#3a0010;color:#e94560;border:1px solid #660020;border-radius:6px;font-size:.9em;font-weight:600;cursor:pointer">🗑 削除</button>
+            style="padding:8px 18px;background:#3a0010;color:#e94560;border:1px solid #660020;border-radius:6px;font-size:.9em;font-weight:600;cursor:pointer"> <i class="fas fa-trash"></i> 削除</button>
         </form>` : ''}
       </div>
     </div>`;
@@ -289,9 +289,9 @@ router.get('/upload', requireAuth, (req, res) => {
   const destPath = (req.query.path as string ?? '');
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
-      <a href="${url('/assets')}">🖼 アセット</a>
+      <a href="${url('/assets')}"> <i class="fas fa-images"></i> アセット</a>
       <span class="sep">›</span>
       <span>アップロード</span>
     </div>
@@ -347,7 +347,7 @@ router.post('/upload', requireAuth, (req, res) => {
   assetUpload.single('file')(req, res, (err) => {
     if (err) {
       return res.status(400).send(layout('エラー', `
-        <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/assets')}">🖼 アセット</a></div>
+        <div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><a href="${url('/assets')}"> <i class="fas fa-images"></i> アセット</a></div>
         <div class="main">
           <p style="color:#e94560;background:#1a0010;border:1px solid #e94560;border-radius:6px;padding:12px">${err.message}</p>
           <p style="margin-top:12px"><a href="${url('/assets/upload')}" style="color:#e94560">← 戻る</a></p>
@@ -358,7 +358,7 @@ router.post('/upload', requireAuth, (req, res) => {
     const previewPath = `uploads/${f.filename}`;
 
     res.send(layout('完了', `
-      <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/assets')}">🖼 アセット</a></div>
+      <div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><a href="${url('/assets')}"> <i class="fas fa-images"></i> アセット</a></div>
       <div class="main" style="max-width:720px">
         <p style="color:#50fa7b;margin-bottom:16px">✅ アップロード完了</p>
         ${kind === 'image'

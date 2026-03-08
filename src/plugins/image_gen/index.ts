@@ -223,7 +223,7 @@ router.get('/cast-avatar/:id/:file', requireAuth, (req, res) => {
 // ── GET: フォーム ─────────────────────────────────
 router.get('/', requireAuth, (_req, res) => {
   if (!GEMINI_KEY) {
-    const body = `<div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><span>🎨 画像生成</span></div>
+    const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><span>🎨 画像生成</span></div>
       <div class="main"><h2>🎨 Imagen 画像生成</h2><div class="error">GEMINI_API_KEY が設定されていません。</div></div>`;
     return res.send(layout('画像生成', body));
   }
@@ -249,7 +249,7 @@ router.get('/', requireAuth, (_req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <span>🎨 画像生成</span>
     </div>
@@ -268,7 +268,7 @@ router.get('/', requireAuth, (_req, res) => {
 
         <!-- 背景シーン -->
         <div class="card">
-          <h3>🖼 背景シーン（任意）</h3>
+          <h3> <i class="fas fa-images"></i> 背景シーン（任意）</h3>
           <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
             <div style="flex:1;min-width:200px">
               <label>背景画像</label>
@@ -283,14 +283,14 @@ router.get('/', requireAuth, (_req, res) => {
             <div>
               <label>画像をアップロード</label>
               <input type="file" id="sceneUploadInput" accept="image/*" style="display:none">
-              <button type="button" id="btnSceneUpload" class="btn btn-copy" style="font-size:.82em">📁 追加</button>
+              <button type="button" id="btnSceneUpload" class="btn btn-copy" style="font-size:.82em"> <i class="fas fa-folder"></i> 追加</button>
             </div>
           </div>
         </div>
 
         <!-- カメラ & タッチ -->
         <div class="card">
-          <h3>🎬 カメラ & タッチ</h3>
+          <h3>video カメラ & タッチ</h3>
           <div style="display:flex;gap:12px;flex-wrap:wrap">
             <div style="flex:1;min-width:180px">
               <label>カメラ（AIモデル）</label>
@@ -320,7 +320,7 @@ router.get('/', requireAuth, (_req, res) => {
 
         <!-- シーン・追加プロンプト -->
         <div class="card">
-          <h3>✍️ プロンプト</h3>
+          <h3> <i class="fas fa-pen"></i> プロンプト</h3>
           <label id="sceneLabel">シーン・ポーズ・追加指示</label>
           <textarea name="scene" id="sceneInput" rows="4" placeholder="standing in a library, looking at camera, slight smile..."></textarea>
           <p class="hint" id="sceneHint">キャスト選択時はベースプロンプトに追加されます</p>
@@ -440,7 +440,7 @@ router.post('/', requireAuth, (req, res) => {
   console.log('[image_gen] POST / prompt:', prompt.slice(0, 80));
   execFile('node', args, { timeout: 90000, env: { ...process.env, HOME: '/home/node' } }, (err, _stdout, stderr) => {
     if (err || !fs.existsSync(outPath)) {
-      const body = `<div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span>
+      const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span>
         <a href="${url('/image_gen')}">🎨 画像生成</a></div>
         <div class="main"><h2>🎨 生成エラー</h2>
           <div class="error">${err?.message ?? 'Unknown error'}<br>
@@ -448,7 +448,7 @@ router.post('/', requireAuth, (req, res) => {
           <p style="margin-top:16px"><a href="${url('/image_gen')}" style="color:#e94560">← 戻る</a></p></div>`;
       return res.send(layout('生成エラー', body));
     }
-    const body = `<div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span>
+    const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span>
       <a href="${url('/image_gen')}">🎨 画像生成</a></div>
       <div class="main"><h2>🎨 生成完了</h2>
         <div class="img-wrap"><img src="${url('/image_gen/img/' + filename)}" alt="generated">

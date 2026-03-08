@@ -108,7 +108,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <span>⚙️ サービス</span>
     </div>
@@ -160,7 +160,7 @@ router.get('/log', requireAuth, async (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <a href="${url('/services')}">⚙️ サービス</a>
       <span class="sep">›</span>

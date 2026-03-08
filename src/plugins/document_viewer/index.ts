@@ -102,7 +102,7 @@ router.get('/', requireAuth, (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <span class="bc">${crumbs}</span>
       <span style="flex:1"></span>
@@ -137,7 +137,7 @@ router.get('/view', requireAuth, (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <a class="bc" href="${url('/docs')}?path=${encodeURIComponent(dirRel)}">${dirRel}</a>
       <span class="sep">›</span>
@@ -151,7 +151,7 @@ router.get('/view', requireAuth, (req, res) => {
         <input type="hidden" name="path" value="${rel}">
         <input type="hidden" name="back" value="${dirRel}">
         <button type="submit"
-          style="padding:6px 14px;background:#3a0010;color:#e94560;border:1px solid #660020;border-radius:5px;font-size:.82em;font-weight:600;cursor:pointer">🗑 削除</button>
+          style="padding:6px 14px;background:#3a0010;color:#e94560;border:1px solid #660020;border-radius:5px;font-size:.82em;font-weight:600;cursor:pointer"> <i class="fas fa-trash"></i> 削除</button>
       </form>
     </div>
     <div class="main">
@@ -195,9 +195,9 @@ router.get('/upload', requireAuth, (req, res) => {
   const destPath = req.query.path as string ?? '';
   res.send(layout('アップロード', `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
-      <a href="${url('/docs')}">📄 ドキュメント</a>
+      <a href="${url('/docs')}"> <i class="fas fa-file-alt"></i> ドキュメント</a>
       <span class="sep">›</span>
       <span>アップロード</span>
     </div>
@@ -250,7 +250,7 @@ router.post('/upload', requireAuth, (req, res) => {
   docUpload.single('file')(req, res, (err) => {
     if (err) {
       return res.status(400).send(layout('エラー', `
-        <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/docs')}">📄 ドキュメント</a></div>
+        <div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><a href="${url('/docs')}"> <i class="fas fa-file-alt"></i> ドキュメント</a></div>
         <div class="main">
           <p style="color:#e94560;background:#1a0010;border:1px solid #e94560;border-radius:6px;padding:12px">${err.message}</p>
           <p style="margin-top:12px"><a href="${url('/docs/upload')}" style="color:#e94560">← 戻る</a></p>
@@ -258,7 +258,7 @@ router.post('/upload', requireAuth, (req, res) => {
     }
     const f = (req as any).file;
     res.send(layout('完了', `
-      <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/docs')}">📄 ドキュメント</a></div>
+      <div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><a href="${url('/docs')}"> <i class="fas fa-file-alt"></i> ドキュメント</a></div>
       <div class="main">
         <p style="color:#50fa7b;margin-bottom:16px">✅ アップロード完了: ${f.filename}</p>
         <p><a href="${url('/docs')}?path=uploads/docs" style="color:#8be9fd">アップロードフォルダを開く</a>
