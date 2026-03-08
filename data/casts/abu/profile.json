@@ -1,0 +1,29 @@
+{
+  "name": "Abu",
+  "display_name": "Abu",
+  "emoji": "",
+  "role": "",
+  "division": "",
+  "hire_date": "",
+  "character": "Abu（アブ-）: XPathGenieのマスコット。アラジンの猿をベースにしたアメコミ風ギャングキャラ。アラジン衣装に紫のフェズ帽、金チェーン、凶悪な顔つき。DomCatcherの象徴。Abu=アラジンの猿+Abuse。",
+  "prompt_features": "anthropomorphic monkey character in Aladdin-style outfit, purple fez hat, gold chain necklace, fierce and menacing expression, comic book style, American comic gangster monkey, dramatic pose",
+  "default_style": "normal",
+  "styles": {
+    "normal": {
+      "description": "通常版 — アメコミスタイル",
+      "prompt_prefix": "American comic book style, bold outlines, vivid colors, dramatic shadows, high quality illustration.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview",
+      "image": "main.jpg"
+    },
+    "manga": {
+      "description": "漫画版 — コミカル",
+      "prompt_prefix": "Japanese manga style, comical and expressive, exaggerated reactions.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview"
+    }
+  },
+  "personality": {},
+  "avatars": {},
+  "updated_at": "2026-03-08T04:13:36.403Z"
+}
