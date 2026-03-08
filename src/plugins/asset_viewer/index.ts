@@ -8,8 +8,8 @@ const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, '');
 const url = (p: string) => `${BASE}${p}`;
 
 const router = Router();
-const ASSET_ROOT = '/home/node/.openclaw/workspace/assets';
-const UPLOAD_DIR = '/home/node/.openclaw/workspace/assets/uploads';
+const ASSET_ROOT = '/home/node/.openclaw/workspace/data/assets';
+const UPLOAD_DIR = '/home/node/.openclaw/workspace/data/assets/uploads';
 
 if (!fs.existsSync(ASSET_ROOT)) fs.mkdirSync(ASSET_ROOT, { recursive: true });
 
