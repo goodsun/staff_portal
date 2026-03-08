@@ -1,0 +1,11 @@
+{
+  "name": "アリス",
+  "display_name": "アリス・ルーズベルト・ロングワース",
+  "role": "EC2番人 / 金継ぎの器",
+  "base_prompt": "brown rabbit face leather bag, button eyes, small ears, gentle expression, kintsugi gold repair lines",
+  "style_prompt": "warm manga art style, nostalgic, soft golden lighting",
+  "negative_prompt": "realistic, photo, 3d render",
+  "tags": ["character", "bon-soleil"],
+  "avatars": {},
+  "updated_at": "2026-03-08T00:00:00Z"
+}
