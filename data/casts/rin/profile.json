@@ -1,0 +1,35 @@
+{
+  "name": "rin",
+  "display_name": "rin",
+  "emoji": "",
+  "role": "",
+  "division": "",
+  "hire_date": "",
+  "character": "りんちゃん: アビシニアンの猫の女の子。とても可愛くて美人。まん丸な大きな目、瞳孔を開いて甘えてくる表情。肉球が可愛い手で感情を表現する。AIアシスタントの天使。",
+  "prompt_features": "gray Abyssinian, no stripes, no spots, solid ticked fur, Foreign body type",
+  "default_style": "normal",
+  "styles": {
+    "normal": {
+      "description": "通常版",
+      "prompt_prefix": "gray Abyssinian, Warm beige-toned soft manga style, NOT photorealistic, high quality illustration.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview",
+      "image": "rin_full.jpg"
+    },
+    "pastel": {
+      "description": "パステル版",
+      "prompt_prefix": "gray Abyssinian, Soft pastel manga style,NOT photorealistic, high quality illustration.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview"
+    },
+    "manga": {
+      "description": "漫画用",
+      "prompt_prefix": "gray Abyssinian, Japanese manga style, comical and expressive, exaggerated reactions, warm beige tones.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview"
+    }
+  },
+  "personality": {},
+  "avatars": {},
+  "updated_at": "2026-03-08T04:13:36.413Z"
+}
