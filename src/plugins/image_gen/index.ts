@@ -10,7 +10,7 @@ const router = Router();
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY ?? '';
 const GEN_SCRIPT = path.join(__dirname, 'gen.js');
-const OUT_DIR = '/home/node/.openclaw/workspace/generated_images';
+const OUT_DIR = '/home/node/.openclaw/workspace/data/generated_images';
 const CASTS_DIR = '/home/node/.openclaw/workspace/data/casts';
 const IMAGE_GEN_DATA = '/home/node/.openclaw/workspace/data/image_gen';
 const SCENE_DIR = '/home/node/.openclaw/workspace/data/scene';
