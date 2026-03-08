@@ -8,8 +8,8 @@ const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, '');
 const url = (p: string) => `${BASE}${p}`;
 
 const router = Router();
-const DOC_ROOT = '/home/node/.openclaw/workspace';
-const UPLOAD_DIR = '/home/node/.openclaw/workspace/uploads/docs';
+const DOC_ROOT = '/home/node/.openclaw/workspace/data/docs';
+const UPLOAD_DIR = '/home/node/.openclaw/workspace/data/docs';
 const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py', '.pdf', '.html', '.htm']);
 
 function safeJoin(base: string, rel: string): string | null {

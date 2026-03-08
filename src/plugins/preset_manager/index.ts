@@ -6,7 +6,7 @@ const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, ''); const url = (p: st
 
 const router = Router();
 
-const PRESETS_FILE = '/home/node/.openclaw/workspace/presets.json';
+const PRESETS_FILE = '/home/node/.openclaw/workspace/data/presets.json';
 
 interface Preset {
   id: string;
