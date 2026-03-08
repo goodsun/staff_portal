@@ -5,11 +5,12 @@ import { requireAuth } from '../../core/auth';
 import { makeDocUploader } from '../../core/upload';
 
 const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, '');
+const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
 const url = (p: string) => `${BASE}${p}`;
 
 const router = Router();
-const DOC_ROOT = '/home/node/.openclaw/workspace/data/docs';
-const UPLOAD_DIR = '/home/node/.openclaw/workspace/data/docs';
+const DOC_ROOT = `${WS}/data/docs`;
+const UPLOAD_DIR = `${WS}/data/docs`;
 const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py', '.pdf', '.html', '.htm']);
 
 function safeJoin(base: string, rel: string): string | null {

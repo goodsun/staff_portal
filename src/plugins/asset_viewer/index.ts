@@ -5,11 +5,12 @@ import { requireAuth } from '../../core/auth';
 import { makeAssetUploader } from '../../core/upload';
 
 const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, '');
+const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
 const url = (p: string) => `${BASE}${p}`;
 
 const router = Router();
-const ASSET_ROOT = '/home/node/.openclaw/workspace/data/assets';
-const UPLOAD_DIR = '/home/node/.openclaw/workspace/data/assets/uploads';
+const ASSET_ROOT = `${WS}/data/assets`;
+const UPLOAD_DIR = `${WS}/data/assets/uploads`;
 
 if (!fs.existsSync(ASSET_ROOT)) fs.mkdirSync(ASSET_ROOT, { recursive: true });
 

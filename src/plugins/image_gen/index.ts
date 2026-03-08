@@ -5,15 +5,16 @@ import fs from 'fs';
 import { requireAuth } from '../../core/auth';
 
 const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, '');
+const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
 const url = (p: string) => `${BASE}${p}`;
 const router = Router();
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY ?? '';
 const GEN_SCRIPT = path.join(__dirname, 'gen.js');
-const OUT_DIR = '/home/node/.openclaw/workspace/data/generated';
-const CASTS_DIR = '/home/node/.openclaw/workspace/data/casts';
-const IMAGE_GEN_DATA = '/home/node/.openclaw/workspace/data/presets';
-const SCENE_DIR = '/home/node/.openclaw/workspace/data/scenes';
+const OUT_DIR = `${WS}/data/generated`;
+const CASTS_DIR = `${WS}/data/casts`;
+const IMAGE_GEN_DATA = `${WS}/data/presets`;
+const SCENE_DIR = `${WS}/data/scenes`;
 if (!fs.existsSync(SCENE_DIR)) fs.mkdirSync(SCENE_DIR, { recursive: true });
 
 function loadPresets() {

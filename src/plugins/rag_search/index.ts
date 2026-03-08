@@ -8,7 +8,8 @@ const url = (p: string) => `${BASE}${p}`;
 const router = Router();
 
 // ── データソース定義 ──────────────────────────────
-const HQ_SCRIPT = '/home/node/.openclaw/workspace/skills/hq-rag-search/scripts/rag_search.js';
+const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
+const HQ_SCRIPT = `${WS}/skills/hq-rag-search/scripts/rag_search.js`;
 const LOCAL_RAG_URL = process.env.LOCAL_RAG_URL ?? 'http://rag:3001';
 
 const HQ_COLLECTIONS = [

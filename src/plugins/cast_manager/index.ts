@@ -5,10 +5,11 @@ import multer from 'multer';
 import { requireAuth } from '../../core/auth';
 
 const BASE: string = (process.env.APP_BASE ?? '').replace(/\/$/, '');
+const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
 const url = (p: string): string => BASE + p;
 const router = Router();
 
-const CASTS_DIR = '/home/node/.openclaw/workspace/data/casts';
+const CASTS_DIR = `${WS}/data/casts`;
 
 // ── multer（アバター画像） ─────────────────────────
 const storage = multer.diskStorage({
