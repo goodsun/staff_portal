@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { requireAuth } from '../../core/auth';
+import { requireAuth, requireAuthOrApiKey } from '../../core/auth';
 
 const BASE = (process.env.APP_BASE ?? '').replace(/\/$/, '');
 const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
@@ -422,7 +422,7 @@ function resolveGenArgs(body: Record<string, any>): { prompt: string, args: stri
 }
 
 // ── POST /api/generate: JSON API（fetch用） ───────
-router.post('/api/generate', requireAuth, sceneUploader.none(), (req, res) => {
+router.post('/api/generate', requireAuthOrApiKey, sceneUploader.none(), (req, res) => {
   const resolved = resolveGenArgs(req.body);
   if (!resolved) return res.status(400).json({ ok: false, error: 'prompt required or GEMINI_API_KEY missing' });
   const { prompt, args, filename, outPath } = resolved;
