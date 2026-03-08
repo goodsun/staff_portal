@@ -12,6 +12,15 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY ?? '';
 const GEN_SCRIPT = path.join(__dirname, 'gen.js');
 const OUT_DIR = '/home/node/.openclaw/workspace/generated_images';
 const CASTS_DIR = '/home/node/.openclaw/workspace/data/casts';
+const IMAGE_GEN_DATA = '/home/node/.openclaw/workspace/data/image_gen';
+
+function loadPresets() {
+  try {
+    const touch = JSON.parse(fs.readFileSync(path.join(IMAGE_GEN_DATA, 'touch_presets.json'), 'utf-8'));
+    const model = JSON.parse(fs.readFileSync(path.join(IMAGE_GEN_DATA, 'model_presets.json'), 'utf-8'));
+    return { touch, model };
+  } catch { return { touch: { presets: [], default: '' }, model: { presets: [], default: '' } }; }
+}
 
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -19,9 +28,13 @@ if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 const GEN_SCRIPT_CONTENT = `
 const fs = require('fs');
 const https = require('https');
-// argv: prompt, outPath, apiKey, [refImagePath], [model]
-const [,, prompt, outPath, apiKey, refImagePath, modelArg] = process.argv;
-if (!prompt || !outPath || !apiKey) { console.error('usage: gen.js <prompt> <outPath> <apiKey> [refImagePath]'); process.exit(1); }
+// argv: prompt outPath apiKey refsJson model aspect
+// refsJson: JSON array of {path, label} e.g. '[{"path":"/...","label":"A"}]' or '' for no ref
+const [,, prompt, outPath, apiKey, refsJsonArg, modelArg, aspectArg] = process.argv;
+const aspect = aspectArg || '1:1';
+const refs = (() => { try { return JSON.parse(refsJsonArg || '[]'); } catch(e) { return []; } })()
+  .filter(r => r.path && fs.existsSync(r.path));
+if (!prompt || !outPath || !apiKey) { console.error('usage: gen.js <prompt> <outPath> <apiKey> [refsJson] [model] [aspect]'); process.exit(1); }
 
 function httpsPost(urlStr, payload) {
   return new Promise((resolve, reject) => {
@@ -35,27 +48,27 @@ function httpsPost(urlStr, payload) {
   });
 }
 
-async function genWithRef(refPath) {
-  // Gemini multimodal: ref image + prompt → image
-  const refData = fs.readFileSync(refPath);
-  const mimeType = refPath.endsWith('.png') ? 'image/png' : 'image/jpeg';
-  const b64ref = refData.toString('base64');
-  const model = modelArg || 'gemini-2.0-flash-exp-image-generation';
-  console.log('using model:', model);
+async function genWithRefs(refList) {
+  const model = modelArg || 'gemini-3-pro-image-preview';
+  console.log('using model:', model, 'refs:', refList.length);
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey;
+  const aspectPrompt = aspect !== '1:1' ? ', aspect ratio ' + aspect : '';
+  const parts = [];
+  for (const ref of refList) {
+    const mimeType = ref.path.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    const b64 = fs.readFileSync(ref.path).toString('base64');
+    parts.push({ inline_data: { mime_type: mimeType, data: b64 } });
+    parts.push({ text: '[This is character ' + ref.label + ']' });
+  }
+  parts.push({ text: prompt + aspectPrompt + '. Use the reference images as character design bases. Maintain each character visual style.' });
   const payload = {
-    contents: [{
-      parts: [
-        { inline_data: { mime_type: mimeType, data: b64ref } },
-        { text: prompt + '. Use the reference image as the character design basis. Maintain the character visual style.' }
-      ]
-    }],
+    contents: [{ parts }],
     generationConfig: { responseModalities: ['image', 'text'] }
   };
   const data = await httpsPost(url, payload);
   if (data.error) { console.error(JSON.stringify(data.error)); process.exit(1); }
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const imgPart = parts.find(p => p.inlineData?.data);
+  const resParts = data.candidates?.[0]?.content?.parts ?? [];
+  const imgPart = resParts.find(p => p.inlineData?.data);
   if (!imgPart) { console.error('No image in response:', JSON.stringify(data).slice(0,300)); process.exit(1); }
   fs.writeFileSync(outPath, Buffer.from(imgPart.inlineData.data, 'base64'));
   console.log('OK(' + model + '):' + outPath);
@@ -63,7 +76,7 @@ async function genWithRef(refPath) {
 
 async function genImagen() {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=' + apiKey;
-  const data = await httpsPost(url, { instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio: '1:1' } });
+  const data = await httpsPost(url, { instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio: aspect } });
   if (data.error) { console.error(JSON.stringify(data.error)); process.exit(1); }
   const b64 = data.predictions?.[0]?.bytesBase64Encoded;
   if (!b64) { console.error('No image:', JSON.stringify(data).slice(0,200)); process.exit(1); }
@@ -72,16 +85,15 @@ async function genImagen() {
 }
 
 async function run() {
-  if (refImagePath && fs.existsSync(refImagePath)) {
-    console.log('using ref:', refImagePath);
-    await genWithRef(refImagePath);
+  if (refs.length > 0) {
+    await genWithRefs(refs);
   } else {
     await genImagen();
   }
 }
 run().catch(e => { console.error(e.message); process.exit(1); });
 `;
-if (!fs.existsSync(GEN_SCRIPT)) fs.writeFileSync(GEN_SCRIPT, GEN_SCRIPT_CONTENT);
+fs.writeFileSync(GEN_SCRIPT, GEN_SCRIPT_CONTENT);
 
 // ── キャストデータ読み込み ────────────────────────
 function loadCasts(): Array<{id: string, name: string, emoji: string, role: string, prompt_features: string, default_style: string, styles: Record<string,any>, avatars: Record<string,string>}> {
@@ -139,6 +151,11 @@ function layout(title: string, body: string): string {
   .hint{color:#555;font-size:.78em;margin-top:4px}
 </style></head><body>${body}</body></html>`;
 }
+
+// ── API: プリセット（タッチ・モデル） ────────────
+router.get('/api/presets', requireAuth, (_req, res) => {
+  res.json(loadPresets());
+});
 
 // ── API: キャストデータJSON ───────────────────────
 router.get('/api/casts', requireAuth, (_req, res) => {
@@ -202,27 +219,41 @@ router.get('/', requireAuth, (_req, res) => {
       <h2>🎨 Imagen 画像生成</h2>
       <form method="post" action="${url('/image_gen')}" id="form">
 
-        <!-- キャスト選択 -->
+        <!-- キャスト選択（複数） -->
         <div class="card">
-          <h3>🎭 キャスト（任意）</h3>
-          <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
-            <div style="flex:1;min-width:200px">
-              <label>キャラクター</label>
-              <select name="cast_id" id="castSelect">
-                <option value="">選択しない（プロンプト直書き）</option>
-                ${castOptions}
+          <h3>🎭 キャスト（任意・複数可）</h3>
+          <div id="castRows"></div>
+          <button type="button" id="btnAddCast" class="btn btn-copy" style="margin-top:8px;font-size:.82em">＋ キャスト追加</button>
+          <p class="hint" style="margin-top:6px">複数選択時はプロンプトでA/B/Cと指定: "A is standing, B is next to A"</p>
+          <input type="hidden" name="cast_refs" id="castRefsInput">
+        </div>
+
+        <!-- カメラ & タッチ -->
+        <div class="card">
+          <h3>🎬 カメラ & タッチ</h3>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:180px">
+              <label>カメラ（AIモデル）</label>
+              <select name="gen_model" id="modelSelect">
+                <option value="">読み込み中...</option>
+              </select>
+              <p class="hint" id="modelHint"></p>
+            </div>
+            <div style="flex:1;min-width:180px">
+              <label>タッチ（画風）</label>
+              <select name="gen_touch" id="touchSelect">
+                <option value="">読み込み中...</option>
               </select>
             </div>
-            <div style="flex:1;min-width:150px;display:none" id="styleWrap">
-              <label>スタイル</label>
-              <select name="cast_style" id="styleSelect"><option value="">—</option></select>
-            </div>
-          </div>
-          <div class="cast-preview" id="castPreview">
-            <div class="cast-icon" id="castIcon">👤</div>
-            <div class="cast-info">
-              <div class="cname" id="castName"></div>
-              <div class="crole" id="castRole"></div>
+            <div style="flex:0 0 140px">
+              <label>アスペクト比</label>
+              <select name="gen_aspect" id="aspectSelect">
+                <option value="1:1">1:1（正方形）</option>
+                <option value="9:16" selected>9:16（縦・スマホ）</option>
+                <option value="16:9">16:9（横・ワイド）</option>
+                <option value="3:4">3:4（縦・ポートレート）</option>
+                <option value="4:3">4:3（横・標準）</option>
+              </select>
             </div>
           </div>
         </div>
@@ -266,7 +297,6 @@ router.post('/', requireAuth, (req, res) => {
 
   // ref画像・モデル: cast_id + cast_styleから解決
   let refImagePath = '';
-  let genModel = '';
   const castId = String(req.body.cast_id ?? '').trim();
   const castStyle = String(req.body.cast_style ?? '').trim();
   if (castId) {
@@ -278,8 +308,14 @@ router.post('/', requireAuth, (req, res) => {
         const candidate = path.join(CASTS_DIR, castId, imgFile);
         if (fs.existsSync(candidate)) refImagePath = candidate;
       }
-      genModel = styleData.model || '';
     } catch {}
+  }
+
+  // モデル: UI選択 > デフォルト(ref有→gemini-3-pro, なし→imagen)
+  const uiModel = String(req.body.gen_model ?? '').trim();
+  let genModel = uiModel;
+  if (!genModel) {
+    genModel = refImagePath ? 'gemini-3-pro-image-preview' : '';
   }
   console.log('[image_gen] ref:', refImagePath || 'none', 'model:', genModel || 'default');
 
@@ -287,9 +323,34 @@ router.post('/', requireAuth, (req, res) => {
   const outPath = path.join(OUT_DIR, filename);
 
   console.log('[image_gen] starting gen.js, outPath:', filename);
-  const args = [GEN_SCRIPT, prompt, outPath, GEMINI_KEY];
-  if (refImagePath) args.push(refImagePath);
-  if (genModel) args.push(genModel);
+  const genAspect = String(req.body.gen_aspect ?? '1:1').trim() || '1:1';
+  // cast_refs: 複数キャスト対応 (JSON array of {id, style, label})
+  // 単一キャスト（cast_id）との後方互換も保つ
+  let refsArr: Array<{path: string, label: string}> = [];
+  const castRefsRaw = String(req.body.cast_refs ?? '').trim();
+  if (castRefsRaw) {
+    try {
+      const castRefsInput = JSON.parse(castRefsRaw) as Array<{id: string, style: string, label: string}>;
+      for (const cr of castRefsInput) {
+        if (!cr.id) continue;
+        try {
+          const profile = JSON.parse(fs.readFileSync(path.join(CASTS_DIR, cr.id, 'profile.json'), 'utf-8'));
+          const styleData = profile.styles?.[cr.style] || profile.styles?.[profile.default_style] || {};
+          const imgFile = styleData.image || '';
+          if (imgFile) {
+            const candidate = path.join(CASTS_DIR, cr.id, imgFile);
+            if (fs.existsSync(candidate)) refsArr.push({ path: candidate, label: cr.label });
+          }
+        } catch {}
+      }
+    } catch {}
+  } else if (refImagePath) {
+    refsArr = [{ path: refImagePath, label: 'A' }];
+  }
+  console.log('[image_gen] refs:', refsArr.map(r => r.label + ':' + r.path.split('/').pop()));
+
+  const refsJson = JSON.stringify(refsArr);
+  const args = [GEN_SCRIPT, prompt, outPath, GEMINI_KEY, refsJson, genModel, genAspect];
   execFile('node', args, {
     timeout: 90000,
     env: { ...process.env, HOME: '/home/node' },
@@ -332,90 +393,155 @@ router.get('/client.js', requireAuth, (req, res) => {
   const js = `
 (function() {
   var castMap = {};
+  var touchMap = {};
+  var modelMap = {};
 
-  console.log('[image_gen] loading casts from API...');
-  fetch('${url('/image_gen/api/casts')}', { credentials: 'same-origin' })
-    .then(function(r){
-      console.log('[image_gen] /api/casts status:', r.status);
-      return r.json();
-    })
-    .then(function(data){
-      console.log('[image_gen] casts loaded:', data.length, data.map(function(c){return c.id;}));
-      castMap = {};
-      data.forEach(function(c){ castMap[c.id] = c; });
-      initUI();
-    })
-    .catch(function(e){ console.error('[image_gen] cast load error:', e); });
+  // casts + presets を並行取得
+  Promise.all([
+    fetch('${url('/image_gen/api/casts')}', { credentials: 'same-origin' }).then(function(r){ return r.json(); }),
+    fetch('${url('/image_gen/api/presets')}', { credentials: 'same-origin' }).then(function(r){ return r.json(); })
+  ]).then(function(results) {
+    var casts = results[0];
+    var presets = results[1];
+    casts.forEach(function(c){ castMap[c.id] = c; });
+    // touch
+    var touchSel = document.getElementById('touchSelect');
+    if (touchSel && presets.touch && presets.touch.presets) {
+      touchSel.innerHTML = presets.touch.presets.map(function(t) {
+        return '<option value="' + t.id + '"' + (t.id === presets.touch.default ? ' selected' : '') + '>' + t.label + '</option>';
+      }).join('');
+      presets.touch.presets.forEach(function(t){ touchMap[t.id] = t; });
+    }
+    // model
+    var modelSel = document.getElementById('modelSelect');
+    var modelHint = document.getElementById('modelHint');
+    if (modelSel && presets.model && presets.model.presets) {
+      modelSel.innerHTML = presets.model.presets.map(function(m) {
+        return '<option value="' + m.model + '"' + (m.id === presets.model.default ? ' selected' : '') + '>' + m.label + '</option>';
+      }).join('');
+      presets.model.presets.forEach(function(m){ modelMap[m.model] = m; });
+      if (modelHint) modelHint.textContent = (presets.model.presets.find(function(m){ return m.id === presets.model.default; }) || {}).note || '';
+      modelSel.addEventListener('change', function() {
+        var m = modelMap[modelSel.value];
+        if (modelHint) modelHint.textContent = m ? m.note : '';
+      });
+    }
+    initUI();
+  }).catch(function(e){ console.error('[image_gen] load error:', e); });
 
-  function initUI() {
-    console.log('[image_gen] initUI called, castMap keys:', Object.keys(castMap));
-    var castSelect = document.getElementById('castSelect');
-    var styleSelect = document.getElementById('styleSelect');
-    var styleWrap = document.getElementById('styleWrap');
-    var castPreview = document.getElementById('castPreview');
-    var castIcon = document.getElementById('castIcon');
-    var castName = document.getElementById('castName');
-    var castRole = document.getElementById('castRole');
-    var sceneLabel = document.getElementById('sceneLabel');
-    var dryRun = document.getElementById('dryRun');
-    var btnCopy = document.getElementById('btnCopy');
+  var LABELS = ['A','B','C','D','E'];
+  var castRowCount = 0;
 
-    if (!castSelect) return;
+  function buildCastOptions(selectedId) {
+    var opts = '<option value="">— 選択しない —</option>';
+    Object.values(castMap).forEach(function(c) {
+      opts += '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + (c.emoji||'') + ' ' + c.name + '</option>';
+    });
+    return opts;
+  }
 
-    castSelect.addEventListener('change', function() {
-      var id = castSelect.value;
-      var cast = castMap[id];
-      dryRun.classList.remove('visible');
-      if (btnCopy) btnCopy.style.display = 'none';
+  function addCastRow(defaultId) {
+    if (castRowCount >= LABELS.length) return;
+    var label = LABELS[castRowCount++];
+    var rowId = 'castRow_' + label;
+    var castSelId = 'castSel_' + label;
+    var stylSelId = 'styleSel_' + label;
+    var previewId = 'castPrev_' + label;
+    var row = document.createElement('div');
+    row.id = rowId;
+    row.style.cssText = 'display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;padding:10px;background:#0d1117;border-radius:6px';
+    row.innerHTML =
+      '<div style="flex:0 0 28px;padding-top:28px;color:#e94560;font-weight:700;font-size:.9em">' + label + '</div>' +
+      '<div style="flex:1;min-width:160px"><label style="display:block;color:#aaa;font-size:.82em;margin-bottom:5px">キャラクター</label>' +
+      '<select id="' + castSelId + '" style="width:100%;padding:9px 12px;background:#0d1117;border:1px solid #0f3460;border-radius:6px;color:#e0e0e0;font-size:.9em">' +
+      buildCastOptions(defaultId) + '</select></div>' +
+      '<div style="flex:1;min-width:130px" id="styleWrap_' + label + '"><label style="display:block;color:#aaa;font-size:.82em;margin-bottom:5px">スタイル</label>' +
+      '<select id="' + stylSelId + '" style="width:100%;padding:9px 12px;background:#0d1117;border:1px solid #0f3460;border-radius:6px;color:#e0e0e0;font-size:.9em"><option value="">—</option></select></div>' +
+      '<div id="' + previewId + '" style="flex:0 0 48px;width:48px;height:48px;border-radius:6px;background:#16213e;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:2px;font-size:1.4em;border:1px solid #0f3460">👤</div>' +
+      (castRowCount > 1 ? '<button type="button" id="btnRemove_' + label + '" style="align-self:flex-end;margin-bottom:2px;background:none;border:none;color:#e94560;cursor:pointer;font-size:1.1em">✕</button>' : '');
+    document.getElementById('castRows').appendChild(row);
 
+    var castSel = document.getElementById(castSelId);
+    var stylSel = document.getElementById(stylSelId);
+    var preview = document.getElementById(previewId);
+    var styleWrap2 = document.getElementById('styleWrap_' + label);
+
+    function updatePreview() {
+      var cast = castMap[castSel.value];
+      if (!cast) return;
+      var sk = stylSel.value || cast.default_style;
+      var imgUrl = (cast.styles[sk] || {}).imageUrl || cast.mainImgUrl || '';
+      preview.innerHTML = imgUrl
+        ? '<img src="' + imgUrl + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px">'
+        : '<span>' + (cast.emoji || '👤') + '</span>';
+    }
+    castSel.addEventListener('change', function() {
+      var cast = castMap[castSel.value];
       if (cast) {
-        styleSelect.innerHTML = Object.entries(cast.styles).map(function(e) {
+        // スタイル選択肢を再構築（castが変わった時のみ）
+        stylSel.innerHTML = Object.entries(cast.styles).map(function(e) {
           var sk = e[0], sv = e[1];
           return '<option value="' + sk + '"' + (sk === cast.default_style ? ' selected' : '') + '>' + sv.description + '</option>';
         }).join('');
-        styleWrap.style.display = 'block';
-        castPreview.classList.add('visible');
-        castName.textContent = (cast.emoji || '') + ' ' + cast.name;
-        castRole.textContent = cast.role || '';
-        updateStylePreview(cast);
-        sceneLabel.textContent = 'シーン・ポーズ・追加指示';
+        styleWrap2.style.display = 'block';
+        updatePreview();
       } else {
-        styleWrap.style.display = 'none';
-        castPreview.classList.remove('visible');
-        sceneLabel.textContent = 'プロンプト（英語推奨）';
+        styleWrap2.style.display = 'none';
+        preview.innerHTML = '👤';
       }
     });
-
-    styleSelect.addEventListener('change', function() {
-      var cast = castMap[castSelect.value];
-      if (cast) updateStylePreview(cast);
-      dryRun.classList.remove('visible');
+    stylSel.addEventListener('change', updatePreview);
+    if (defaultId) updateRow();
+    // 削除ボタンのイベント（2行目以降）
+    var removeBtn = document.getElementById('btnRemove_' + label);
+    if (removeBtn) removeBtn.addEventListener('click', function() {
+      var el = document.getElementById(rowId);
+      if (el) el.remove();
+      castRowCount--;
     });
+  } // end addCastRow
 
-    function updateStylePreview(cast) {
-      var sk = styleSelect.value || cast.default_style;
-      var style = cast.styles[sk] || {};
-      var imgUrl = style.imageUrl || cast.mainImgUrl || '';
-      castIcon.innerHTML = imgUrl
-        ? '<img src="' + imgUrl + '" alt="" style="width:100%;height:100%;object-fit:cover">'
-        : '<span style="font-size:1.5em">' + (cast.emoji || '\\u{1F464}') + '</span>';
-    }
+  function initUI() {
+    var dryRun = document.getElementById('dryRun');
+    var btnCopy = document.getElementById('btnCopy');
+    var btnAddCast = document.getElementById('btnAddCast');
+    // 最初の1行を自動追加
+    addCastRow('');
+    if (btnAddCast) btnAddCast.addEventListener('click', function() { addCastRow(''); });
+  }
+
+  function getCastRefs() {
+    // 各castRowからrefs配列を組み立て
+    var result = [];
+    LABELS.forEach(function(label) {
+      var castSel = document.getElementById('castSel_' + label);
+      var stylSel = document.getElementById('styleSel_' + label);
+      if (!castSel || !castSel.value) return;
+      result.push({ id: castSel.value, style: stylSel ? stylSel.value : '', label: label });
+    });
+    return result;
   }
 
   function buildFinalPrompt() {
-    var castSelect = document.getElementById('castSelect');
-    var styleSelect = document.getElementById('styleSelect');
+    var touchSelect = document.getElementById('touchSelect');
     var scene = (document.getElementById('sceneInput') || {value:''}).value.trim();
-    var id = castSelect ? castSelect.value : '';
-    var cast = castMap[id];
-    if (cast) {
-      var sk = (styleSelect && styleSelect.value) || cast.default_style;
-      var style = cast.styles[sk] || {};
-      var features = style.prompt_features_override || cast.prompt_features || '';
-      var prefix = style.prompt_prefix || '';
-      return [prefix, features, scene].filter(Boolean).join(', ');
+    var touchPrompt = '';
+    if (touchSelect && touchSelect.value && touchMap[touchSelect.value]) {
+      touchPrompt = touchMap[touchSelect.value].prompt || '';
     }
-    return scene;
+    var refs = getCastRefs();
+    if (refs.length === 1) {
+      // 単一キャスト: 従来通りprompt_featuresを含める
+      var cast = castMap[refs[0].id];
+      var sk = refs[0].style || (cast && cast.default_style) || '';
+      var style = cast && cast.styles[sk] || {};
+      var features = style.prompt_features_override || (cast && cast.prompt_features) || '';
+      return [touchPrompt, features, scene].filter(Boolean).join(', ');
+    } else if (refs.length > 1) {
+      // 複数キャスト: ラベルを使う——prompt_featuresは入れない（refが語る）
+      return [touchPrompt, scene].filter(Boolean).join(', ');
+    }
+    return [touchPrompt, scene].filter(Boolean).join(', ');
   }
 
   // defer済みスクリプトはDOMContentLoaded発火後に実行される — 直接登録
@@ -448,9 +574,11 @@ router.get('/client.js', requireAuth, (req, res) => {
       console.log('[image_gen] submit prompt:', p);
       if (!p) { alert('プロンプトを入力してください'); return; }
       if (finalPrompt) finalPrompt.value = p;
-      var castSelect2 = document.getElementById('castSelect');
-      var styleSelect2 = document.getElementById('styleSelect');
-      console.log('[image_gen] calling form.submit(), cast:', castSelect2 && castSelect2.value, 'style:', styleSelect2 && styleSelect2.value);
+      // cast_refs JSON をhidden fieldに入れる
+      var castRefsInput = document.getElementById('castRefsInput');
+      var refs = getCastRefs();
+      if (castRefsInput) castRefsInput.value = refs.length ? JSON.stringify(refs) : '';
+      console.log('[image_gen] calling form.submit(), refs:', refs.length, refs.map(function(r){return r.label+':'+r.id;}));
       btnGen.disabled = true;
       btnGen.textContent = '生成中...（10〜30秒）';
       if (form) form.submit();
