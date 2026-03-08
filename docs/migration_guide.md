@@ -1,6 +1,6 @@
 # workspace 移行ガイド — data/ディレクトリ構造への統一
 
-*2026-03-08 作成: メフィ（CCO）*
+*2026-03-08 作成: メフィ（CCO） / レビュー: テディ🧸・彰子🏺*
 
 ---
 
@@ -22,12 +22,12 @@ workspace/
   # 開発中プロジェクト（GitHubへ上がったら削除）
   projects/
     {project_name}/  ← 開発中はここ、完成→GitHub→削除
-  labo_portal/     ← 既存（次のメジャーバージョン時にprojects/へ整理）
+  labo_portal/     ← 既存稼働中アプリ（次のメジャーバージョンで整理）
 
   # 全データ（Dockerボリュームでマウント）
   data/
     casts/         ← キャラクタープロファイル + 画像
-    scenes/        ← 背景画像（image_gen用）
+    scenes/        ← 背景画像（image_gen用）※新規作成、旧パスなし
     presets/       ← touch/model presets（image_gen用）
     generated/     ← 生成物（画像・テキスト）
     assets/        ← 静的素材
@@ -57,31 +57,54 @@ workspace/
 
 | 旧パス | 新パス | 状態 |
 |--------|--------|------|
-| `workspace/assets/` | `data/assets/` | ✅ 完了（旧を削除すること） |
-| `workspace/generated_images/` | `data/generated/` | ✅ 完了（旧を削除すること） |
-| `workspace/uploads/docs/` | `data/docs/` | ✅ 完了（旧を削除すること） |
-| `workspace/presets.json` | `data/presets.json` ※未使用 | 削除OK |
-| `workspace/note_ideas.md` | `data/docs/note_ideas.md` | 要移行 |
-| `workspace/note_mephi_20260305.md` | `data/docs/note_mephi_20260305.md` | 要移行 |
-| `workspace/note_posting_guide.md` | `data/docs/note_posting_guide.md` | 要移行 |
-| `workspace/note_drafts/` | `data/drafts/` | 要移行 |
+| `workspace/assets/` | `data/assets/` | ✅ 完了（旧削除済み） |
+| `workspace/generated_images/` | `data/generated/` | ✅ 完了（旧削除済み） |
+| `workspace/uploads/docs/` | `data/docs/` | ✅ 完了（旧削除済み） |
+| `workspace/presets.json` | `data/presets/` ※labo-portal管理に移行 | ✅ 削除済み |
+| `workspace/note_ideas.md` | `data/docs/note_ideas.md` | ✅ 完了 |
+| `workspace/note_mephi_20260305.md` | `data/docs/note_mephi_20260305.md` | ✅ 完了 |
+| `workspace/note_posting_guide.md` | `data/docs/note_posting_guide.md` | ✅ 完了 |
+| `workspace/note_drafts/` | `data/drafts/` | ✅ 完了 |
+| `data/scenes/` | — | ✅ 新規作成（旧パスなし） |
 
-### 要判断ファイル
+### 処理済みファイル
 
-| ファイル | 内容 | 判断 |
-|---------|------|------|
-| `workspace/mephi_chat.js` | 焚き火チャット実行スクリプト | → `data/docs/`か`scripts/`、または削除 |
-| `workspace/rag_search.js` | RAG検索スクリプト（旧） | → `skills/`に移動、または削除 |
-| `workspace/rag_service/` | RAGサービス定義（GitHubにもある） | → 削除（labo_portal repoに移管済み） |
-| `workspace/mephi.log` | ログファイル | → 削除 |
-| `data/casts/::w` | vim操作ミスで生成されたファイル | → 削除 |
-| `data/casts/.git/` | castsの旧gitリポジトリ | → 削除（staff_portal時代の残骸） |
+| ファイル | 判断 |
+|---------|------|
+| `workspace/mephi_chat.js` | ✅ 削除（campfireはAliceのEC2管理） |
+| `workspace/rag_search.js` | ✅ 削除（skills/hq-rag-searchに移管済み） |
+| `workspace/rag_service/` | ✅ 削除（goodsun/labo_portal repoに移管済み） |
+| `workspace/mephi.log` | ✅ 削除 |
+| `data/casts/::w` | ✅ 削除（vim誤操作ファイル） |
+| `data/casts/.git/` | ✅ 削除（staff_portal時代の残骸） |
 
 ---
 
-## 実施手順
+## 実施手順（次回以降の参考）
 
-### Step 1: workspace直下の散在ファイルをdata/docs/に移動
+### Step 0: バックアップを取る（**必須**）
+
+```bash
+# 作業前に必ずバックアップを取ること
+tar czf backup_$(date +%Y%m%d).tar.gz workspace/data/
+echo "バックアップ完了: backup_$(date +%Y%m%d).tar.gz"
+```
+
+> ⚠️ `data/casts/.git/` 削除など取り返しのつかない操作の前は特に重要。
+
+### Step 1: コンテナ状態の確認
+
+```bash
+# data/はDockerボリュームでマウントされている
+# コンテナ起動中でもファイル操作は可能だが、
+# アプリが参照中のファイルを削除する場合はコンテナを停止してから行う
+docker ps | grep mephi   # コンテナ状態確認
+```
+
+> **安全な操作（起動中でも可）**: ファイルの追加・移動  
+> **要停止**: アプリが参照中のファイルの削除・名前変更
+
+### Step 2: workspace直下の散在ファイルをdata/docs/に移動
 
 ```bash
 mv workspace/note_ideas.md workspace/data/docs/
@@ -89,72 +112,103 @@ mv workspace/note_mephi_20260305.md workspace/data/docs/
 mv workspace/note_posting_guide.md workspace/data/docs/
 ```
 
-### Step 2: note_draftsをdata/drafts/に移動
+### Step 3: note_draftsをdata/drafts/に移動
 
 ```bash
 mv workspace/note_drafts workspace/data/drafts
 ```
 
-### Step 3: 旧ディレクトリの削除（**必ず確認してから削除**）
+### Step 4: 旧ディレクトリの削除（**確認してから削除**）
 
 ```bash
-# ⚠️ 削除前に必ずdata/側にファイルが揃っているか確認する
-ls -la workspace/data/assets/
-ls -la workspace/data/docs/
-ls -la workspace/data/generated/
+# ⚠️ 削除前に data/側のファイル数を旧パスと比較して確認する
+echo "旧 assets:" && ls workspace/assets/uploads/ | wc -l
+echo "新 assets:" && ls workspace/data/assets/uploads/ | wc -l
 
-# 確認できたら削除
+echo "旧 generated_images:" && ls workspace/generated_images/ | wc -l
+echo "新 generated:"        && ls workspace/data/generated/ | wc -l
+
+echo "旧 uploads/docs:" && ls workspace/uploads/docs/ | wc -l
+echo "新 docs:"         && ls workspace/data/docs/ | wc -l
+
+# 一致を確認してから削除
 rm -rf workspace/assets/
 rm -rf workspace/generated_images/
 rm -rf workspace/uploads/
 rm -f workspace/presets.json
 ```
 
-### Step 4: 要判断ファイルの処理
+### Step 5: 不要ファイルの削除
 
 ```bash
 rm workspace/mephi.log
 rm -rf workspace/rag_service/        # GitHubリポジトリに存在するため
 rm workspace/rag_search.js           # skills/hq-rag-searchに移管済み
-rm workspace/mephi_chat.js           # 焚き火チャットはAliceのEC2で管理（campfireリポジトリ）
+rm workspace/mephi_chat.js           # 焚き火チャットはAliceのEC2管理
 ```
 
-> `mephi_chat.js` はlabo-portalのスコープ外。campfire本体はAliceのEC2にあり、ローカルに置く理由がない。
-
-### Step 5: data/casts/の掃除（**移管確認後に削除**）
+### Step 6: data/casts/の掃除（**GitHubで移管確認後に削除**）
 
 ```bash
-# ⚠️ .git/を消す前に、labo_portalリポジトリにcasts全データが存在するか確認する
-# GitHubの goodsun/labo_portal または staff_portal でキャスト画像・profile.jsonを確認すること
+# ⚠️ .git/を消す前に、GitHubでcasts全データが確認できること
+# https://github.com/goodsun/labo_portal (または staff_portal) で
+# キャスト画像・profile.jsonの存在を確認すること
 
-# 確認できたら削除
 rm workspace/data/casts/'::w'        # vim誤操作ファイル
 rm -rf workspace/data/casts/.git/   # 旧gitリポジトリ（staff_portal時代の残骸）
+```
+
+### labo_portal/を移動する場合（将来）
+
+`labo_portal/` を `projects/labo_portal/` 等に移動する際は以下が必要：
+
+```bash
+# 1. labo-portalを停止
+pkill -f 'ts-node.*app.ts'
+
+# 2. ディレクトリ移動
+mv workspace/labo_portal workspace/projects/labo_portal
+
+# 3. Apache設定・HEARTBEAT.mdのパスを更新
+#    /etc/apache2/sites-enabled/*.conf のProxyPass
+#    workspace/HEARTBEAT.md のcd コマンド
+
+# 4. labo-portal再起動
+cd workspace/projects/labo_portal && HOME=/tmp nohup node_modules/.bin/ts-node src/app.ts >> /tmp/labo_portal.log 2>&1 &
 ```
 
 ---
 
 ## 完了後の確認チェックリスト
 
-- [ ] `workspace/assets/` が存在しない
-- [ ] `workspace/generated_images/` が存在しない
-- [ ] `workspace/uploads/` が存在しない
-- [ ] `workspace/presets.json` が存在しない
-- [ ] `workspace/note_*.md` が存在しない（data/docs/に移動済み）
-- [ ] `workspace/note_drafts/` が存在しない（data/drafts/に移動済み）
-- [ ] `data/casts/::w` が存在しない
-- [ ] `data/casts/.git/` が存在しない
-- [ ] `data/docs/` に全ドキュメントが揃っている
-- [ ] `data/drafts/` にnote草稿が揃っている
+```bash
+# 旧ディレクトリが存在しないことを確認
+[ ! -d workspace/assets ]           && echo "✅ assets/ なし" || echo "❌ assets/ 残存"
+[ ! -d workspace/generated_images ] && echo "✅ generated_images/ なし" || echo "❌ generated_images/ 残存"
+[ ! -d workspace/uploads ]          && echo "✅ uploads/ なし" || echo "❌ uploads/ 残存"
+[ ! -f workspace/presets.json ]     && echo "✅ presets.json なし" || echo "❌ presets.json 残存"
+[ ! -f workspace/mephi_chat.js ]    && echo "✅ mephi_chat.js なし" || echo "❌ mephi_chat.js 残存"
+
+# data/に必要なディレクトリが揃っていることを確認
+for d in casts scenes presets generated assets docs drafts; do
+  [ -d workspace/data/$d ] && echo "✅ data/$d" || echo "❌ data/$d なし"
+done
+
+# ドキュメントの存在確認
+echo "data/docs/ ファイル数: $(ls workspace/data/docs/ | wc -l)"
+echo "data/drafts/ ファイル数: $(ls workspace/data/drafts/ | wc -l)"
+```
 
 ---
 
 ## 注意事項
 
 - **OpenClawシステムファイル**（AGENTS.md等）は `workspace/` 直下に置く。`data/`に移動しない。
-- **`data/`はDockerボリューム**としてHQの`mephi_data/`にマウントされている。削除・移動はコンテナとHQ両方に反映される。
-- `mephi_chat.js`は焚き火チャット用スクリプト。保存するなら`workspace/scripts/`等に整理する。
+- **`data/`はDockerボリューム**: HQの`mephi_data/`にマウント。削除・移動はコンテナとHQ両方に即座に反映される。
+- **作業前バックアップは必須**: `tar czf backup_YYYYMMDD.tar.gz workspace/data/`
+- **scripts/は作らない**: 一時スクリプトは`/tmp/`に置くか、スキルとして`skills/`に昇格させること。
 
 ---
 
-*文責: メフィ（CCO）😈 — 2026-03-08*
+*文責: メフィ（CCO）😈 — 2026-03-08*  
+*レビュー: テディ🧸（4点指摘）、彰子🏺（6点指摘）→ 全項目対応済み*
