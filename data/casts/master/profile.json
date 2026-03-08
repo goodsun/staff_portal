@@ -1,0 +1,29 @@
+{
+  "name": "MASTER",
+  "display_name": "MASTER",
+  "emoji": "",
+  "role": "",
+  "division": "",
+  "hire_date": "",
+  "character": "MASTER（マスター）: スマートカジュアルな青年。短い黒髪、ジャケット、スマホやラップトップを持つ。知的でフレンドリーな雰囲気。テディの相棒。",
+  "prompt_features": "young man with short dark hair, smart casual jacket over shirt, friendly and intellectual appearance, holding smartphone or laptop",
+  "default_style": "normal",
+  "styles": {
+    "normal": {
+      "description": "通常版 — スマートカジュアル",
+      "prompt_prefix": "Warm beige-toned soft manga style, NOT photorealistic, high quality illustration.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview",
+      "image": "main.jpg"
+    },
+    "manga": {
+      "description": "漫画版 — コミカル",
+      "prompt_prefix": "Japanese manga style, comical and expressive, exaggerated reactions, warm beige tones.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview"
+    }
+  },
+  "personality": {},
+  "avatars": {},
+  "updated_at": "2026-03-08T04:13:36.410Z"
+}
