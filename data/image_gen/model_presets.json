@@ -1,0 +1,26 @@
+{
+  "presets": [
+    {
+      "id": "gemini_3_pro",
+      "label": "Gemini 3 Pro（高品質・ref対応）",
+      "model": "gemini-3-pro-image-preview",
+      "supports_ref": true,
+      "note": "refあり推奨。キャラクター一貫性が高い"
+    },
+    {
+      "id": "gemini_2_flash",
+      "label": "Gemini 2.0 Flash（高速・ref対応）",
+      "model": "gemini-2.0-flash-exp-image-generation",
+      "supports_ref": true,
+      "note": "速い。refあり対応。品質はProより落ちる"
+    },
+    {
+      "id": "imagen_4_fast",
+      "label": "Imagen 4 Fast（テキスト専用・高速）",
+      "model": "imagen-4.0-fast-generate-001",
+      "supports_ref": false,
+      "note": "refなし専用。テキストプロンプトのみ。最速"
+    }
+  ],
+  "default": "gemini_3_pro"
+}
