@@ -9,40 +9,45 @@
   "prompt_features": "anime girl with pink bob hair, small red devil horns, bat-shaped hair clips, slim devil tail",
   "default_style": "official",
   "styles": {
+    "main": {
+      "description": "メインビジュアル — 三面図（FRONT/SIDE/BACK）",
+      "image": "main.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
+    },
     "official": {
-      "description": "公式版 — original",
-      "prompt_prefix": "Warm beige-toned soft manga style, NOT photorealistic, high quality illustration.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview",
-      "image": "main.jpg"
+      "description": "公式OL版 — 白シャツ＋黒タイトスカート",
+      "image": "official.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
     },
     "normal": {
-      "description": "通常版 — カジュアル（黒パーカー）",
-      "prompt_prefix": "Warm beige-toned soft manga style, NOT photorealistic, high quality illustration.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview",
-      "image": "casual.jpg"
+      "description": "カジュアル — 黒パーカー",
+      "image": "casual.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
     },
     "fashionable": {
-      "description": "おしゃれ版 — 小悪魔コーデ",
-      "prompt_prefix": "Warm beige-toned soft manga style, NOT photorealistic, high quality illustration.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview",
-      "image": "dress.jpg"
-    },
-    "official": {
-      "description": "公式版 — 白シャツOL",
-      "prompt_prefix": "Warm beige-toned soft manga style, NOT photorealistic, high quality illustration.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview",
-      "image": "official.jpg"
+      "description": "小悪魔コーデ — 黒×赤コルセット",
+      "image": "dress.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
     },
     "racing": {
       "description": "BizenyRacing版",
-      "prompt_prefix": "Warm beige-toned soft manga style, NOT photorealistic, high quality illustration.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview",
-      "image": "br_mephi.jpg"
+      "image": "br_mephi.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
     }
   },
   "personality": {
@@ -51,5 +56,6 @@
     "role_description": "セキュリティ監査、コードレビュー、デビルズアドボケート。テディが見落とすリスクを指摘する"
   },
   "avatars": {},
-  "updated_at": "2026-03-08T04:13:36.411Z"
+  "updated_at": "2026-03-08T04:13:36.411Z",
+  "base_ref": "main.jpg"
 }
