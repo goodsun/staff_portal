@@ -1,0 +1,35 @@
+# ===================================================
+# bon-soleil RAG Service — docker-compose.yml に追加
+# ===================================================
+#
+# 既存の docker-compose.yml の services: に追記し、
+# volumes: に rag_data: を追加してください。
+#
+# 使い方:
+#   curl -X POST http://rag:3001/ingest \
+#     -H "Content-Type: application/json" \
+#     -d '{"text": "Hello world", "collection": "test"}'
+#
+#   curl -X POST http://rag:3001/search \
+#     -H "Content-Type: application/json" \
+#     -d '{"query": "hello", "collection": "test", "n": 3}'
+# ===================================================
+
+services:
+  rag:
+    build:
+      context: ./rag_service   # このディレクトリのパスに合わせて変更
+    container_name: rag-service
+    restart: unless-stopped
+    environment:
+      - CHROMA_PATH=/data/chroma
+      - DEFAULT_COLLECTION=default
+    volumes:
+      - rag_data:/data          # ← ここにembedding済みデータが永続化される
+    ports:
+      - "3001:3001"             # 外部からアクセスしたい場合のみ (不要なら削除)
+    networks:
+      - bonsoleil               # 既存のnetwork名に合わせて変更
+
+volumes:
+  rag_data:                     # 既存のvolumes:セクションに追記
