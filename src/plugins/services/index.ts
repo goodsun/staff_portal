@@ -97,7 +97,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const cards = statuses.map(s => `
     <div class="service-card">
-      <div class="svc-icon">${s.icon}</div>
+      <div class="svc-icon"><i class="${s.icon}"></i></div>
       <div class="svc-info">
         <div class="svc-name">${s.name}</div>
         <div class="svc-status ${s.running ? 'on' : 'off'}">${s.running ? '● 稼働中' : '○ 停止中'}</div>
