@@ -182,6 +182,14 @@ router.post('/upload/scene', requireAuth, sceneUploader.single('file'), (req, re
   res.json({ ok: true, filename: req.file.filename, url: url('/image_gen/scene/' + req.file.filename) });
 });
 
+// ── 背景画像削除 ──────────────────────────────────
+router.delete('/scene/:file', requireAuth, (req, res) => {
+  const filePath = path.join(SCENE_DIR, path.basename(req.params.file));
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
+  fs.unlinkSync(filePath);
+  res.json({ ok: true });
+});
+
 // ── API: プリセット（タッチ・モデル） ────────────
 router.get('/api/presets', requireAuth, (_req, res) => {
   res.json(loadPresets());
@@ -268,8 +276,9 @@ router.get('/', requireAuth, (_req, res) => {
                 <option value="">なし（背景指定しない）</option>
               </select>
             </div>
-            <div id="scenePreviewWrap" style="display:none">
+            <div id="scenePreviewWrap" style="display:none;position:relative">
               <img id="scenePreviewImg" src="" alt="" style="height:64px;border-radius:6px;border:1px solid #0f3460;object-fit:cover">
+              <button type="button" id="btnSceneDelete" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0">✕</button>
             </div>
             <div>
               <label>画像をアップロード</label>
@@ -489,17 +498,39 @@ router.get('/client.js', requireAuth, (req, res) => {
     var sceneSel = document.getElementById('sceneSelect');
     var scenePreviewWrap = document.getElementById('scenePreviewWrap');
     var scenePreviewImg = document.getElementById('scenePreviewImg');
-    if (sceneSel && scenes.length > 0) {
+    function buildSceneOptions() {
+      while (sceneSel.options.length > 1) sceneSel.remove(1);
       scenes.forEach(function(s) {
         var opt = document.createElement('option');
-        opt.value = s.filename;
-        opt.textContent = s.filename;
+        opt.value = s.filename; opt.textContent = s.filename;
         sceneSel.appendChild(opt);
       });
+    }
+    if (sceneSel && scenes.length > 0) {
+      buildSceneOptions();
       sceneSel.addEventListener('change', function() {
         var sel = scenes.find(function(s){ return s.filename === sceneSel.value; });
         if (sel) { scenePreviewImg.src = sel.url; scenePreviewWrap.style.display = 'block'; }
         else { scenePreviewWrap.style.display = 'none'; }
+      });
+    }
+    // シーン削除ボタン
+    var btnSceneDelete = document.getElementById('btnSceneDelete');
+    if (btnSceneDelete) {
+      btnSceneDelete.addEventListener('click', function() {
+        var filename = sceneSel ? sceneSel.value : '';
+        if (!filename) return;
+        if (!confirm(filename + ' を削除しますか？')) return;
+        fetch('${url('/image_gen/scene/')}' + encodeURIComponent(filename), { method: 'DELETE', credentials: 'same-origin' })
+          .then(function(r){ return r.json(); })
+          .then(function(d) {
+            if (d.ok) {
+              scenes = scenes.filter(function(s){ return s.filename !== filename; });
+              buildSceneOptions();
+              sceneSel.value = '';
+              scenePreviewWrap.style.display = 'none';
+            }
+          });
       });
     }
     // シーンアップロード
