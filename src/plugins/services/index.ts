@@ -22,14 +22,14 @@ const SERVICES: ServiceDef[] = [
   {
     id: 'labo_portal',
     name: 'labo-portal',
-    icon: '🏭',
+    icon: 'fas fa-industry',
     check: "ps aux | grep 'ts-node.*app.ts' | grep -v grep",
     logFile: '/tmp/labo_portal.log',
   },
   {
     id: 'openclaw',
     name: 'OpenClaw Gateway',
-    icon: '🦀',
+    icon: 'fas fa-cube',
     check: "ps aux | grep 'openclaw' | grep -v grep",
   },
 ];
@@ -46,6 +46,7 @@ function layout(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <title>${title} — labo-portal</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -96,7 +97,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const cards = statuses.map(s => `
     <div class="service-card">
-      <div class="svc-icon">${s.icon}</div>
+      <div class="svc-icon"><i class="${s.icon}"></i></div>
       <div class="svc-info">
         <div class="svc-name">${s.name}</div>
         <div class="svc-status ${s.running ? 'on' : 'off'}">${s.running ? '● 稼働中' : '○ 停止中'}</div>
@@ -108,7 +109,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <span>⚙️ サービス</span>
     </div>
@@ -160,7 +161,7 @@ router.get('/log', requireAuth, async (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <a href="${url('/services')}">⚙️ サービス</a>
       <span class="sep">›</span>
@@ -177,7 +178,7 @@ router.get('/log', requireAuth, async (req, res) => {
 
 export const meta = {
   name: 'サービス',
-  icon: '⚙️',
+  icon: 'fas fa-cog',
   desc: 'プロセス状態・ログ確認',
   layer: 'core' as const,
   url: '/services',

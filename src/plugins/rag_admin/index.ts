@@ -97,6 +97,7 @@ function layout(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <title>${title} — labo-portal</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -139,9 +140,9 @@ function layout(title: string, body: string): string {
 
 function headerHtml(sub?: string): string {
   return `<div class="header">
-    <a href="${url('/')}">🏭 labo-portal</a>
+    <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
     <span class="sep">›</span>
-    <a href="${url('/rag_admin')}">🧬 RAG管理</a>
+    <a href="${url('/rag_admin')}">  <i class="fas fa-dna"></i> RAG管理</a>
     ${sub ? `<span class="sep">›</span><span>${sub}</span>` : ''}
   </div>`;
 }
@@ -217,7 +218,7 @@ router.get('/', requireAuth, async (_req, res) => {
   const body = `
     ${headerHtml()}
     <div class="main">
-      <h2>🧬 RAG管理コンソール</h2>
+      <h2><i class="fas fa-dna"></i> RAG管理コンソール</h2>
 
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
         <span style="color:#888;font-size:.85em">${RAG_URL}</span>
@@ -280,11 +281,11 @@ router.get('/documents', requireAuth, async (req, res) => {
     const body = `
       ${headerHtml('ドキュメント一覧')}
       <div class="main">
-        <h2>📄 ${collection} <span style="color:#888;font-size:.75em">(${total}件)</span></h2>
+        <h2> <i class="fas fa-file-alt"></i> ${collection} <span style="color:#888;font-size:.75em">(${total}件)</span></h2>
         <div class="tabs">
           <a href="${url('/rag_admin')}" class="tab">📚 コレクション</a>
           <a href="${url('/rag_admin/ingest?collection=' + encodeURIComponent(collection))}" class="tab">📥 投入</a>
-          <span class="tab active">📄 ドキュメント</span>
+          <span class="tab active"> <i class="fas fa-file-alt"></i> ドキュメント</span>
         </div>
         <div class="card">
           <div style="display:flex;flex-direction:column;gap:8px">
@@ -316,7 +317,7 @@ router.get('/edit', requireAuth, async (req, res) => {
     const body = `
       ${headerHtml('編集')}
       <div class="main">
-        <h2>✏️ ドキュメント編集</h2>
+        <h2> <i class="fas fa-edit"></i> ドキュメント編集</h2>
         <p style="color:#555;font-family:monospace;font-size:.8em;margin-bottom:16px">${docId}</p>
         <form method="post" action="${url('/rag_admin/update')}">
           <input type="hidden" name="doc_id" value="${docId}">
@@ -588,7 +589,7 @@ router.post('/delete-collection', requireAuth, async (req, res) => {
     const body = `
       ${headerHtml('削除エラー')}
       <div class="main">
-        <h2>🧬 削除エラー</h2>
+        <h2><i class="fas fa-dna"></i> 削除エラー</h2>
         <div class="alert alert-err">❌ ${err.message}</div>
         <a href="${url('/rag_admin')}" class="btn btn-primary" style="margin-top:16px;display:inline-block">← 戻る</a>
       </div>`;
@@ -598,7 +599,7 @@ router.post('/delete-collection', requireAuth, async (req, res) => {
 
 export const meta = {
   name: 'RAG管理',
-  icon: '🧬',
+  icon: 'fas fa-dna',
   desc: 'ローカルRAGコンテナの管理・データ投入',
   layer: 'layer2' as const,
   url: '/rag_admin',

@@ -30,7 +30,7 @@ function getKind(filename: string): AssetKind {
 }
 
 function kindIcon(kind: AssetKind) {
-  return { image: '🖼', video: '🎬', model: '📦', other: '📎' }[kind];
+  return { image: 'fas fa-image', video: 'fas fa-video', model: 'fas fa-cube', other: 'fas fa-file' }[kind];
 }
 
 function safeJoin(base: string, rel: string): string | null {
@@ -46,6 +46,7 @@ function layout(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <title>${title} — labo-portal</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
 <style>
@@ -132,7 +133,7 @@ router.get('/', requireAuth, (req, res) => {
 
   const dirItems = dirs.map(e => {
     const childRel = rel ? `${rel}/${e.name}` : e.name;
-    return `<li><a href="${url('/assets')}?path=${encodeURIComponent(childRel)}"><span>📁</span>${e.name}/</a></li>`;
+    return `<li><a href="${url('/assets')}?path=${encodeURIComponent(childRel)}"><span class="icon"><i class="fas fa-folder"></i></span>${e.name}/</a></li>`;
   }).join('');
 
   const fileCards = files.map(e => {
@@ -142,7 +143,7 @@ router.get('/', requireAuth, (req, res) => {
       ? `<img src="${url('/assets/raw')}?path=${encodeURIComponent(childRel)}" alt="${e.name}" loading="lazy">`
       : e.kind === 'video'
       ? `<video src="${url('/assets/raw')}?path=${encodeURIComponent(childRel)}" muted></video>`
-      : `<span class="icon-big">${kindIcon(e.kind)}</span>`;
+      : `<span class="icon-big"><i class="${kindIcon(e.kind)}"></i></span>`;
 
     return `
       <div class="asset-card" style="position:relative">
@@ -150,7 +151,7 @@ router.get('/', requireAuth, (req, res) => {
           <div class="asset-thumb">${thumb}</div>
           <div class="asset-info">
             <div class="asset-name">${e.name}</div>
-            <div class="asset-kind">${kindIcon(e.kind)} ${e.kind}</div>
+            <div class="asset-kind"><i class="${kindIcon(e.kind)}"></i> ${e.kind}</div>
           </div>
         </a>
         <form method="post" action="${url('/assets/delete')}"
@@ -166,7 +167,7 @@ router.get('/', requireAuth, (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <span class="bc">${crumbs}</span>
     </div>
@@ -214,7 +215,7 @@ router.get('/view', requireAuth, (req, res) => {
 
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
       <a class="bc" href="${url('/assets')}?path=${encodeURIComponent(dirRel)}">${dirRel || 'assets'}</a>
       <span class="sep">›</span>
@@ -233,7 +234,7 @@ router.get('/view', requireAuth, (req, res) => {
             style="width:32px;height:32px;background:rgba(233,69,96,0.9);color:#fff;border:none;border-radius:50%;font-size:1.1em;font-weight:700;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)">✕</button>
         </form>
       </div>` : `<div class="preview-wrap">${preview}</div>`}
-      <div class="meta-row" style="margin-top:12px">${kindIcon(kind)} ${kind} &nbsp;|&nbsp; ${sizeKB} KB &nbsp;|&nbsp; ${filename}</div>
+      <div class="meta-row" style="margin-top:12px"><i class="${kindIcon(kind)}"></i> ${kind} &nbsp;|&nbsp; ${sizeKB} KB &nbsp;|&nbsp; ${filename}</div>
       <div class="actions" style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <a href="${rawUrl}" download="${filename}" class="actions a btn-dl">⬇ ダウンロード</a>
         <a href="${url('/assets')}?path=${encodeURIComponent(dirRel)}" class="actions a btn-back">← 戻る</a>
@@ -245,7 +246,7 @@ router.get('/view', requireAuth, (req, res) => {
           <input type="hidden" name="path" value="${rel}">
           <input type="hidden" name="back" value="${dirRel}">
           <button type="submit"
-            style="padding:8px 18px;background:#3a0010;color:#e94560;border:1px solid #660020;border-radius:6px;font-size:.9em;font-weight:600;cursor:pointer">🗑 削除</button>
+            style="padding:8px 18px;background:#3a0010;color:#e94560;border:1px solid #660020;border-radius:6px;font-size:.9em;font-weight:600;cursor:pointer"> <i class="fas fa-trash"></i> 削除</button>
         </form>` : ''}
       </div>
     </div>`;
@@ -289,9 +290,9 @@ router.get('/upload', requireAuth, (req, res) => {
   const destPath = (req.query.path as string ?? '');
   const body = `
     <div class="header">
-      <a href="${url('/')}">🏭 labo-portal</a>
+      <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
-      <a href="${url('/assets')}">🖼 アセット</a>
+      <a href="${url('/assets')}"> <i class="fas fa-images"></i> アセット</a>
       <span class="sep">›</span>
       <span>アップロード</span>
     </div>
@@ -347,7 +348,7 @@ router.post('/upload', requireAuth, (req, res) => {
   assetUpload.single('file')(req, res, (err) => {
     if (err) {
       return res.status(400).send(layout('エラー', `
-        <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/assets')}">🖼 アセット</a></div>
+        <div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><a href="${url('/assets')}"> <i class="fas fa-images"></i> アセット</a></div>
         <div class="main">
           <p style="color:#e94560;background:#1a0010;border:1px solid #e94560;border-radius:6px;padding:12px">${err.message}</p>
           <p style="margin-top:12px"><a href="${url('/assets/upload')}" style="color:#e94560">← 戻る</a></p>
@@ -358,12 +359,12 @@ router.post('/upload', requireAuth, (req, res) => {
     const previewPath = `uploads/${f.filename}`;
 
     res.send(layout('完了', `
-      <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span><a href="${url('/assets')}">🖼 アセット</a></div>
+      <div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><a href="${url('/assets')}"> <i class="fas fa-images"></i> アセット</a></div>
       <div class="main" style="max-width:720px">
         <p style="color:#50fa7b;margin-bottom:16px">✅ アップロード完了</p>
         ${kind === 'image'
           ? `<img src="${url('/assets/raw')}?path=${encodeURIComponent(previewPath)}" style="max-width:100%;max-height:400px;border-radius:8px;border:1px solid #0f3460">`
-          : `<p style="color:#aaa">${kindIcon(kind)} ${f.filename}</p>`
+          : `<p style="color:#aaa"><i class="${kindIcon(kind)}"></i> ${f.filename}</p>`
         }
         <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
           <a href="${url('/assets/view')}?path=${encodeURIComponent(previewPath)}" style="padding:8px 18px;background:#0f3460;color:#8be9fd;border-radius:6px;text-decoration:none;font-weight:600">プレビュー</a>
@@ -376,7 +377,7 @@ router.post('/upload', requireAuth, (req, res) => {
 
 export const meta = {
   name: 'Asset Viewer',
-  icon: '🖼',
+  icon: 'fas fa-images',
   desc: '画像・動画・3Dモデルの表示＆アップロード',
   layer: 'core' as const,
   url: '/assets',
