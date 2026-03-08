@@ -9,7 +9,7 @@ const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
 const url = (p: string) => `${BASE}${p}`;
 const router = Router();
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY ?? '';
+const getGeminiKey = () => process.env.GEMINI_API_KEY ?? '';
 const GEN_SCRIPT = path.join(__dirname, 'gen.js');
 const OUT_DIR = `${WS}/data/generated`;
 const CASTS_DIR = `${WS}/data/casts`;
@@ -224,7 +224,7 @@ router.get('/cast-avatar/:id/:file', requireAuth, (req, res) => {
 
 // ── GET: フォーム ─────────────────────────────────
 router.get('/', requireAuth, (_req, res) => {
-  if (!GEMINI_KEY) {
+  if (!getGeminiKey()) {
     const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><span>  <i class="fas fa-palette"></i> 画像生成</span></div>
       <div class="main"><h2><i class="fas fa-palette"></i> Imagen 画像生成</h2><div class="error">GEMINI_API_KEY が設定されていません。</div></div>`;
     return res.send(layout('画像生成', body));
@@ -366,7 +366,7 @@ router.get('/', requireAuth, (_req, res) => {
 // ── 生成ロジック共通関数 ─────────────────────────
 function resolveGenArgs(body: Record<string, any>): { prompt: string, args: string[], filename: string, outPath: string } | null {
   const prompt = ((body.final_prompt || body.scene || body.prompt) ?? '').trim();
-  if (!prompt || !GEMINI_KEY) return null;
+  if (!prompt || !getGeminiKey()) return null;
 
   let refImagePath = '';
   const castId = String(body.cast_id ?? '').trim();
@@ -416,14 +416,14 @@ function resolveGenArgs(body: Record<string, any>): { prompt: string, args: stri
 
   const filename = `gen_${Date.now()}.png`;
   const outPath = path.join(OUT_DIR, filename);
-  const args = [GEN_SCRIPT, prompt, outPath, GEMINI_KEY, JSON.stringify(refsArr), genModel, genAspect];
+  const args = [GEN_SCRIPT, prompt, outPath, getGeminiKey(), JSON.stringify(refsArr), genModel, genAspect];
   return { prompt, args, filename, outPath };
 }
 
 // ── POST /api/generate: JSON API（fetch用） ───────
 router.post('/api/generate', requireAuth, (req, res) => {
   const resolved = resolveGenArgs(req.body);
-  if (!resolved) return res.status(400).json({ ok: false, error: 'prompt required or GEMINI_KEY missing' });
+  if (!resolved) return res.status(400).json({ ok: false, error: 'prompt required or GEMINI_API_KEY missing' });
   const { prompt, args, filename, outPath } = resolved;
   console.log('[image_gen] api/generate prompt:', prompt.slice(0, 80));
   execFile('node', args, { timeout: 90000, env: { ...process.env, HOME: '/home/node' } }, (err, _stdout, stderr) => {
@@ -778,7 +778,7 @@ router.get('/client.js', requireAuth, (req, res) => {
         .then(function(r) { return r.json(); })
         .then(function(d) {
           btnGen.disabled = false;
-          btnGen.textContent = '<i class="fas fa-palette"></i> 生成する';
+          btnGen.innerHTML = '<i class="fas fa-palette"></i> 生成する';
           if (d.ok) {
             if (resultImg) resultImg.src = d.imgUrl;
             if (resultDownload) { resultDownload.href = d.downloadUrl; resultDownload.download = d.filename; }
@@ -794,7 +794,7 @@ router.get('/client.js', requireAuth, (req, res) => {
         })
         .catch(function(e) {
           btnGen.disabled = false;
-          btnGen.textContent = '<i class="fas fa-palette"></i> 生成する';
+          btnGen.innerHTML = '<i class="fas fa-palette"></i> 生成する';
           if (resultError) { resultError.textContent = 'ネットワークエラー: ' + e.message; resultError.style.display = 'block'; }
           if (resultPanel) resultPanel.style.display = 'block';
         });
