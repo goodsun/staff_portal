@@ -421,7 +421,7 @@ function resolveGenArgs(body: Record<string, any>): { prompt: string, args: stri
 }
 
 // ── POST /api/generate: JSON API（fetch用） ───────
-router.post('/api/generate', requireAuth, (req, res) => {
+router.post('/api/generate', requireAuth, sceneUploader.none(), (req, res) => {
   const resolved = resolveGenArgs(req.body);
   if (!resolved) return res.status(400).json({ ok: false, error: 'prompt required or GEMINI_API_KEY missing' });
   const { prompt, args, filename, outPath } = resolved;
