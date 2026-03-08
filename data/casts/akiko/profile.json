@@ -11,68 +11,74 @@
   "styles": {
     "normal": {
       "description": "通常版 — 着物（デフォルト）",
-      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, gentle warm colors, high quality.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview",
-      "image": "bizenyakiko_charsheet_v4.jpg"
+      "image": "bizenyakiko_charsheet_v4.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
     },
     "pure": {
       "description": "ピュア — 緑の雲紋着物・正面向き・清楚な笑顔",
-      "prompt_prefix": "Warm anime-style illustration, clean and pure atmosphere, gentle warm colors, high quality.",
-      "prompt_features_override": "young Japanese-French woman with dark brown hair neatly pulled up in a high bun with soft bangs, rosy cheeks, high quality",
-      "model": "gemini-3-pro-image-preview",
-      "image": "pure.jpg"
+      "image": "pure.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "young Japanese-French woman with dark brown hair neatly pulled up in a high bun with soft bangs, rosy cheeks, high quality"
     },
     "misterius": {
       "description": "ミステリアス — 紺の花柄着物・肩見せ・備前焼の壺抱え・後ろ振り向き",
-      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, alluring and mysterious atmosphere, gentle warm colors, high quality.",
-      "prompt_features_override": "young Japanese-French woman with dark brown hair in a loose low bun with soft side-swept strands, mysterious alluring smile, rosy cheeks",
-      "model": "gemini-3-pro-image-preview",
-      "image": "misterius.jpg"
+      "image": "misterius.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "young Japanese-French woman with dark brown hair in a loose low bun with soft side-swept strands, mysterious alluring smile, rosy cheeks"
     },
     "casual": {
       "description": "カジュアル — カーディガン姿",
-      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, gentle warm colors, high quality.",
-      "prompt_features_override": "young Japanese-French woman with dark brown hair in a relaxed low ponytail with soft side-swept wispy bangs and loose face-framing strands, beige knit cardigan over white blouse, taupe straight-leg pants, rosy cheeks, gentle and intellectual expression",
-      "model": "gemini-3-pro-image-preview",
-      "image": "casual.png"
+      "image": "casual.png",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "young Japanese-French woman with dark brown hair in a relaxed low ponytail with soft side-swept wispy bangs and loose face-framing strands, beige knit cardigan over white blouse, taupe straight-leg pants, rosy cheeks, gentle and intellectual expression"
     },
     "corporate": {
       "description": "ビジネス — スーツ姿",
-      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, gentle warm colors, high quality.",
-      "prompt_features_override": "young Japanese-French woman with dark brown hair pulled up in a neat bun with soft side-swept wispy bangs, navy blue business suit with white blouse, rosy cheeks, confident and professional expression",
-      "model": "gemini-3-pro-image-preview",
-      "image": "corporate.jpg"
+      "image": "corporate.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "young Japanese-French woman with dark brown hair pulled up in a neat bun with soft side-swept wispy bangs, navy blue business suit with white blouse, rosy cheeks, confident and professional expression"
     },
     "dressup": {
       "description": "ドレスアップ — エメラルドグリーンドレス",
-      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, gentle warm colors, high quality.",
-      "prompt_features_override": "young Japanese-French woman with dark brown hair in an elegant updo with soft side-swept wispy bangs and delicate loose strands, emerald green cocktail dress with matching bolero jacket, rosy cheeks, elegant and graceful expression",
-      "model": "gemini-3-pro-image-preview",
-      "image": "dressup.png"
+      "image": "dressup.png",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "young Japanese-French woman with dark brown hair in an elegant updo with soft side-swept wispy bangs and delicate loose strands, emerald green cocktail dress with matching bolero jacket, rosy cheeks, elegant and graceful expression"
     },
     "armored": {
       "description": "鎧 — 備前焼テクスチャの和風鎧＋刀",
-      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, gentle warm colors, high quality.",
-      "prompt_features_override": "young Japanese-French woman with dark brown hair in a tight battle-ready bun with soft side-swept bangs, wearing dark brown Bizen-ware inspired samurai armor with lamellar chest plate, shoulder guards, forearm guards, shin guards, white obi sash, dark hakama pants, two katanas at waist, tabi sandals, calm but determined expression",
-      "model": "gemini-3-pro-image-preview",
-      "image": "armored.jpg"
+      "image": "armored.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "young Japanese-French woman with dark brown hair in a tight battle-ready bun with soft side-swept bangs, wearing dark brown Bizen-ware inspired samurai armor with lamellar chest plate, shoulder guards, forearm guards, shin guards, white obi sash, dark hakama pants, two katanas at waist, tabi sandals, calm but determined expression"
     },
     "punk": {
       "description": "パンク — パリジェンヌ・パンクストリート",
-      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, gentle warm colors, high quality.",
-      "prompt_features_override": "young Japanese-French woman with dark brown hair in a low bun with soft side-swept bangs, black beret, studded black leather biker jacket covered in pins and patches, torn black band t-shirt, red plaid mini skirt, torn fishnet stockings, black buckled combat boots, choker necklace, ear piercings, rebellious but gentle expression",
-      "model": "gemini-3-pro-image-preview",
-      "image": "punk.jpg"
+      "image": "punk.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "young Japanese-French woman with dark brown hair in a low bun with soft side-swept bangs, black beret, studded black leather biker jacket covered in pins and patches, torn black band t-shirt, red plaid mini skirt, torn fishnet stockings, black buckled combat boots, choker necklace, ear piercings, rebellious but gentle expression"
     },
     "4koma": {
       "description": "4コマ漫画 — Instagram投稿用",
-      "prompt_prefix": "Japanese 4-koma manga style, vertical 4 panels, 1024x1024 square, speech bubbles in each panel, cute and educational, warm colors.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview"
+      "prompt_features_override": null
     }
   },
   "personality": {},
   "avatars": {},
-  "updated_at": "2026-03-08T04:13:36.410Z"
+  "updated_at": "2026-03-08T05:44:49.272Z"
 }
