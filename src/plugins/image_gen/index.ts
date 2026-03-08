@@ -342,23 +342,33 @@ router.get('/', requireAuth, (_req, res) => {
         <p class="hint" style="margin-top:8px">生成には10〜30秒かかります</p>
       </form>
     </div>
+
+    <!-- 生成結果パネル -->
+    <div id="resultPanel" style="display:none;margin-top:32px;padding:24px;background:#0f3460;border-radius:12px">
+      <h3 style="margin-top:0;color:#e94560">🎨 生成完了</h3>
+      <div id="resultImgWrap" style="text-align:center;margin-bottom:16px">
+        <img id="resultImg" src="" alt="generated" style="max-width:100%;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.5)">
+      </div>
+      <p id="resultPromptEcho" style="color:#aaa;font-size:.88em;margin-bottom:16px"></p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a id="resultDownload" href="#" download class="btn btn-copy">⬇ ダウンロード</a>
+        <button type="button" id="btnScrollTop" class="btn btn-primary">↑ フォームに戻る</button>
+      </div>
+      <div id="resultError" style="display:none;color:#e94560;margin-top:12px"></div>
+    </div>
+
     <script src="${url('/image_gen/client.js')}" defer></script>`;
   res.send(layout('画像生成', body));
 });
 
-// ── POST: 生成実行 ────────────────────────────────
-router.post('/', requireAuth, (req, res) => {
-  // final_prompt（組み立て済み）があればそれを使う、なければsceneをそのまま
-  const prompt = ((req.body.final_prompt || req.body.scene || req.body.prompt) ?? '').trim();
-  console.log('[image_gen] POST body keys:', Object.keys(req.body), 'cast_id:', req.body.cast_id, 'cast_style:', req.body.cast_style);
-  console.log('[image_gen] POST received, prompt:', prompt.slice(0, 80));
-  if (!prompt) return res.redirect(url('/image_gen'));
-  if (!GEMINI_KEY) return res.redirect(url('/image_gen'));
+// ── 生成ロジック共通関数 ─────────────────────────
+function resolveGenArgs(body: Record<string, any>): { prompt: string, args: string[], filename: string, outPath: string } | null {
+  const prompt = ((body.final_prompt || body.scene || body.prompt) ?? '').trim();
+  if (!prompt || !GEMINI_KEY) return null;
 
-  // ref画像・モデル: cast_id + cast_styleから解決
   let refImagePath = '';
-  const castId = String(req.body.cast_id ?? '').trim();
-  const castStyle = String(req.body.cast_style ?? '').trim();
+  const castId = String(body.cast_id ?? '').trim();
+  const castStyle = String(body.cast_style ?? '').trim();
   if (castId) {
     try {
       const profile = JSON.parse(fs.readFileSync(path.join(CASTS_DIR, castId, 'profile.json'), 'utf-8'));
@@ -371,23 +381,12 @@ router.post('/', requireAuth, (req, res) => {
     } catch {}
   }
 
-  // モデル: UI選択 > デフォルト(ref有→gemini-3-pro, なし→imagen)
-  const uiModel = String(req.body.gen_model ?? '').trim();
-  let genModel = uiModel;
-  if (!genModel) {
-    genModel = refImagePath ? 'gemini-3-pro-image-preview' : '';
-  }
-  console.log('[image_gen] ref:', refImagePath || 'none', 'model:', genModel || 'default');
+  const uiModel = String(body.gen_model ?? '').trim();
+  const genModel = uiModel || (refImagePath ? 'gemini-3-pro-image-preview' : '');
+  const genAspect = String(body.gen_aspect ?? '1:1').trim() || '1:1';
 
-  const filename = `gen_${Date.now()}.png`;
-  const outPath = path.join(OUT_DIR, filename);
-
-  console.log('[image_gen] starting gen.js, outPath:', filename);
-  const genAspect = String(req.body.gen_aspect ?? '1:1').trim() || '1:1';
-  // cast_refs: 複数キャスト対応 (JSON array of {id, style, label})
-  // 単一キャスト（cast_id）との後方互換も保つ
   let refsArr: Array<{path: string, label: string}> = [];
-  const castRefsRaw = String(req.body.cast_refs ?? '').trim();
+  const castRefsRaw = String(body.cast_refs ?? '').trim();
   if (castRefsRaw) {
     try {
       const castRefsInput = JSON.parse(castRefsRaw) as Array<{id: string, style: string, label: string}>;
@@ -407,48 +406,56 @@ router.post('/', requireAuth, (req, res) => {
   } else if (refImagePath) {
     refsArr = [{ path: refImagePath, label: 'A' }];
   }
-  // 背景ref
-  const bgFile = String(req.body.background_scene ?? '').trim();
+  const bgFile = String(body.background_scene ?? '').trim();
   if (bgFile) {
     const bgPath = path.join(SCENE_DIR, path.basename(bgFile));
     if (fs.existsSync(bgPath)) refsArr.push({ path: bgPath, label: 'BG', type: 'background' } as any);
   }
-  console.log('[image_gen] refs:', refsArr.map((r: any) => (r.type||r.label) + ':' + r.path.split('/').pop()));
 
-  const refsJson = JSON.stringify(refsArr);
-  const args = [GEN_SCRIPT, prompt, outPath, GEMINI_KEY, refsJson, genModel, genAspect];
-  execFile('node', args, {
-    timeout: 90000,
-    env: { ...process.env, HOME: '/home/node' },
-  }, (err, stdout, stderr) => {
-    console.log('[image_gen] gen.js done, err:', err?.message, 'stdout:', stdout?.slice(0,50), 'stderr:', stderr?.slice(0,100));
+  const filename = `gen_${Date.now()}.png`;
+  const outPath = path.join(OUT_DIR, filename);
+  const args = [GEN_SCRIPT, prompt, outPath, GEMINI_KEY, JSON.stringify(refsArr), genModel, genAspect];
+  return { prompt, args, filename, outPath };
+}
+
+// ── POST /api/generate: JSON API（fetch用） ───────
+router.post('/api/generate', requireAuth, (req, res) => {
+  const resolved = resolveGenArgs(req.body);
+  if (!resolved) return res.status(400).json({ ok: false, error: 'prompt required or GEMINI_KEY missing' });
+  const { prompt, args, filename, outPath } = resolved;
+  console.log('[image_gen] api/generate prompt:', prompt.slice(0, 80));
+  execFile('node', args, { timeout: 90000, env: { ...process.env, HOME: '/home/node' } }, (err, _stdout, stderr) => {
     if (err || !fs.existsSync(outPath)) {
-      const body = `
-        <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span>
-          <a href="${url('/image_gen')}">🎨 画像生成</a></div>
-        <div class="main">
-          <h2>🎨 生成エラー</h2>
+      return res.status(500).json({ ok: false, error: err?.message ?? 'generation failed', stderr });
+    }
+    res.json({ ok: true, filename, imgUrl: url('/image_gen/img/' + filename), downloadUrl: url('/image_gen/img/' + filename) });
+  });
+});
+
+// ── POST /: 後方互換（フォーム直送用、現在は未使用） ──
+router.post('/', requireAuth, (req, res) => {
+  const resolved = resolveGenArgs(req.body);
+  if (!resolved) return res.redirect(url('/image_gen'));
+  const { prompt, args, filename, outPath } = resolved;
+  console.log('[image_gen] POST / prompt:', prompt.slice(0, 80));
+  execFile('node', args, { timeout: 90000, env: { ...process.env, HOME: '/home/node' } }, (err, _stdout, stderr) => {
+    if (err || !fs.existsSync(outPath)) {
+      const body = `<div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span>
+        <a href="${url('/image_gen')}">🎨 画像生成</a></div>
+        <div class="main"><h2>🎨 生成エラー</h2>
           <div class="error">${err?.message ?? 'Unknown error'}<br>
             <pre style="margin-top:8px;font-size:.85em;white-space:pre-wrap">${stderr}</pre></div>
-          <p style="margin-top:16px"><a href="${url('/image_gen')}" style="color:#e94560">← 戻る</a></p>
-        </div>`;
+          <p style="margin-top:16px"><a href="${url('/image_gen')}" style="color:#e94560">← 戻る</a></p></div>`;
       return res.send(layout('生成エラー', body));
     }
-
-    const body = `
-      <div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span>
-        <a href="${url('/image_gen')}">🎨 画像生成</a></div>
-      <div class="main">
-        <h2>🎨 生成完了</h2>
-        <div class="img-wrap">
-          <img src="${url('/image_gen/img/' + filename)}" alt="generated">
-          <p class="prompt-echo">「${prompt.replace(/</g,'&lt;').slice(0, 120)}${prompt.length > 120 ? '…' : ''}」</p>
-        </div>
+    const body = `<div class="header"><a href="${url('/')}">🏭 labo-portal</a><span class="sep">›</span>
+      <a href="${url('/image_gen')}">🎨 画像生成</a></div>
+      <div class="main"><h2>🎨 生成完了</h2>
+        <div class="img-wrap"><img src="${url('/image_gen/img/' + filename)}" alt="generated">
+          <p class="prompt-echo">「${prompt.replace(/</g,'&lt;').slice(0,120)}${prompt.length>120?'…':''}」</p></div>
         <div style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap">
           <a href="${url('/image_gen/img/' + filename)}" download="${filename}" class="btn btn-copy">⬇ ダウンロード</a>
-          <a href="${url('/image_gen')}" class="btn btn-primary">もう一枚生成</a>
-        </div>
-      </div>`;
+          <a href="${url('/image_gen')}" class="btn btn-primary">もう一枚生成</a></div></div>`;
     res.send(layout('生成完了', body));
   });
 });
@@ -461,6 +468,37 @@ router.get('/client.js', requireAuth, (req, res) => {
   var castMap = {};
   var touchMap = {};
   var modelMap = {};
+
+  // localStorage: 設定の保存・復元
+  var LS_KEY = 'ig_settings';
+  function saveSettings() {
+    var s = {};
+    ['gen_touch','gen_model','gen_aspect'].forEach(function(name) {
+      var el = document.querySelector('[name="' + name + '"]');
+      if (el) s[name] = el.value;
+    });
+    var sceneEl = document.getElementById('sceneSelect');
+    if (sceneEl) s['background_scene'] = sceneEl.value;
+    var sceneInput = document.getElementById('sceneInput');
+    if (sceneInput) s['scene_text'] = sceneInput.value;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch(e) {}
+  }
+  function restoreSettings() {
+    try {
+      var s = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+      ['gen_touch','gen_model','gen_aspect'].forEach(function(name) {
+        var el = document.querySelector('[name="' + name + '"]');
+        if (el && s[name]) el.value = s[name];
+      });
+      var sceneEl = document.getElementById('sceneSelect');
+      if (sceneEl && s['background_scene']) {
+        sceneEl.value = s['background_scene'];
+        sceneEl.dispatchEvent(new Event('change'));
+      }
+      var sceneInput = document.getElementById('sceneInput');
+      if (sceneInput && s['scene_text']) sceneInput.value = s['scene_text'];
+    } catch(e) {}
+  }
 
   // casts + presets を並行取得
   Promise.all([
@@ -556,6 +594,7 @@ router.get('/client.js', requireAuth, (req, res) => {
       });
     }
     initUI();
+    restoreSettings();
   }).catch(function(e){ console.error('[image_gen] load error:', e); });
 
   var LABELS = ['A','B','C','D','E'];
@@ -697,20 +736,66 @@ router.get('/client.js', requireAuth, (req, res) => {
       });
     });
 
+    // 変更のたびにlocalStorageへ保存
+    ['gen_touch','gen_model','gen_aspect'].forEach(function(name) {
+      var el = document.querySelector('[name="' + name + '"]');
+      if (el) el.addEventListener('change', saveSettings);
+    });
+    var sceneEl2 = document.getElementById('sceneSelect');
+    if (sceneEl2) sceneEl2.addEventListener('change', saveSettings);
+    var sceneInput2 = document.getElementById('sceneInput');
+    if (sceneInput2) sceneInput2.addEventListener('input', saveSettings);
+
+    // 結果パネル
+    var resultPanel = document.getElementById('resultPanel');
+    var resultImg = document.getElementById('resultImg');
+    var resultPromptEcho = document.getElementById('resultPromptEcho');
+    var resultDownload = document.getElementById('resultDownload');
+    var resultError = document.getElementById('resultError');
+    var btnScrollTop = document.getElementById('btnScrollTop');
+    if (btnScrollTop) btnScrollTop.addEventListener('click', function() { window.scrollTo({top:0,behavior:'smooth'}); });
+
     var form = document.getElementById('form');
     if (btnGen) btnGen.addEventListener('click', function() {
       var p = buildFinalPrompt();
-      console.log('[image_gen] submit prompt:', p);
       if (!p) { alert('プロンプトを入力してください'); return; }
       if (finalPrompt) finalPrompt.value = p;
-      // cast_refs JSON をhidden fieldに入れる
       var castRefsInput = document.getElementById('castRefsInput');
       var refs = getCastRefs();
       if (castRefsInput) castRefsInput.value = refs.length ? JSON.stringify(refs) : '';
-      console.log('[image_gen] calling form.submit(), refs:', refs.length, refs.map(function(r){return r.label+':'+r.id;}));
+
+      saveSettings();
+
       btnGen.disabled = true;
       btnGen.textContent = '生成中...（10〜30秒）';
-      if (form) form.submit();
+      if (resultPanel) resultPanel.style.display = 'none';
+      if (resultError) resultError.style.display = 'none';
+
+      var fd = new FormData(form);
+      fetch('${url('/image_gen/api/generate')}', { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          btnGen.disabled = false;
+          btnGen.textContent = '🎨 生成する';
+          if (d.ok) {
+            if (resultImg) resultImg.src = d.imgUrl;
+            if (resultDownload) { resultDownload.href = d.downloadUrl; resultDownload.download = d.filename; }
+            if (resultPromptEcho) resultPromptEcho.textContent = '「' + p.slice(0,120) + (p.length>120?'…':'') + '」';
+            if (resultPanel) {
+              resultPanel.style.display = 'block';
+              resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          } else {
+            if (resultError) { resultError.textContent = d.error || '生成に失敗しました'; resultError.style.display = 'block'; }
+            if (resultPanel) resultPanel.style.display = 'block';
+          }
+        })
+        .catch(function(e) {
+          btnGen.disabled = false;
+          btnGen.textContent = '🎨 生成する';
+          if (resultError) { resultError.textContent = 'ネットワークエラー: ' + e.message; resultError.style.display = 'block'; }
+          if (resultPanel) resultPanel.style.display = 'block';
+        });
     });
   })();
 })();
