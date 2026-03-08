@@ -13,6 +13,8 @@ const GEN_SCRIPT = path.join(__dirname, 'gen.js');
 const OUT_DIR = '/home/node/.openclaw/workspace/generated_images';
 const CASTS_DIR = '/home/node/.openclaw/workspace/data/casts';
 const IMAGE_GEN_DATA = '/home/node/.openclaw/workspace/data/image_gen';
+const SCENE_DIR = '/home/node/.openclaw/workspace/data/scene';
+if (!fs.existsSync(SCENE_DIR)) fs.mkdirSync(SCENE_DIR, { recursive: true });
 
 function loadPresets() {
   try {
@@ -58,7 +60,11 @@ async function genWithRefs(refList) {
     const mimeType = ref.path.endsWith('.png') ? 'image/png' : 'image/jpeg';
     const b64 = fs.readFileSync(ref.path).toString('base64');
     parts.push({ inline_data: { mime_type: mimeType, data: b64 } });
-    parts.push({ text: '[This is character ' + ref.label + ']' });
+    if (ref.type === 'background') {
+      parts.push({ text: '[This is the background setting/scene]' });
+    } else {
+      parts.push({ text: '[This is character ' + ref.label + ']' });
+    }
   }
   parts.push({ text: prompt + aspectPrompt + '. Use the reference images as character design bases. Maintain each character visual style.' });
   const payload = {
@@ -152,6 +158,30 @@ function layout(title: string, body: string): string {
 </style></head><body>${body}</body></html>`;
 }
 
+// ── API: 背景シーン一覧 ──────────────────────────
+const IMG_EXTS = ['.jpg','.jpeg','.png','.webp'];
+router.get('/api/scenes', requireAuth, (_req, res) => {
+  const files = fs.existsSync(SCENE_DIR)
+    ? fs.readdirSync(SCENE_DIR).filter(f => IMG_EXTS.includes(path.extname(f).toLowerCase()))
+    : [];
+  res.json(files.map(f => ({ filename: f, url: url('/image_gen/scene/' + f) })));
+});
+
+// ── 背景画像配信 ─────────────────────────────────
+router.get('/scene/:file', requireAuth, (req, res) => {
+  const filePath = path.join(SCENE_DIR, path.basename(req.params.file));
+  if (!fs.existsSync(filePath)) return res.status(404).end();
+  res.sendFile(filePath);
+});
+
+// ── 背景画像アップロード ──────────────────────────
+import { makeAssetUploader } from '../../core/upload';
+const sceneUploader = makeAssetUploader(SCENE_DIR);
+router.post('/upload/scene', requireAuth, sceneUploader.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'no file' });
+  res.json({ ok: true, filename: req.file.filename, url: url('/image_gen/scene/' + req.file.filename) });
+});
+
 // ── API: プリセット（タッチ・モデル） ────────────
 router.get('/api/presets', requireAuth, (_req, res) => {
   res.json(loadPresets());
@@ -226,6 +256,27 @@ router.get('/', requireAuth, (_req, res) => {
           <button type="button" id="btnAddCast" class="btn btn-copy" style="margin-top:8px;font-size:.82em">＋ キャスト追加</button>
           <p class="hint" style="margin-top:6px">複数選択時はプロンプトでA/B/Cと指定: "A is standing, B is next to A"</p>
           <input type="hidden" name="cast_refs" id="castRefsInput">
+        </div>
+
+        <!-- 背景シーン -->
+        <div class="card">
+          <h3>🖼 背景シーン（任意）</h3>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <label>背景画像</label>
+              <select name="background_scene" id="sceneSelect">
+                <option value="">なし（背景指定しない）</option>
+              </select>
+            </div>
+            <div id="scenePreviewWrap" style="display:none">
+              <img id="scenePreviewImg" src="" alt="" style="height:64px;border-radius:6px;border:1px solid #0f3460;object-fit:cover">
+            </div>
+            <div>
+              <label>画像をアップロード</label>
+              <input type="file" id="sceneUploadInput" accept="image/*" style="display:none">
+              <button type="button" id="btnSceneUpload" class="btn btn-copy" style="font-size:.82em">📁 追加</button>
+            </div>
+          </div>
         </div>
 
         <!-- カメラ & タッチ -->
@@ -347,7 +398,13 @@ router.post('/', requireAuth, (req, res) => {
   } else if (refImagePath) {
     refsArr = [{ path: refImagePath, label: 'A' }];
   }
-  console.log('[image_gen] refs:', refsArr.map(r => r.label + ':' + r.path.split('/').pop()));
+  // 背景ref
+  const bgFile = String(req.body.background_scene ?? '').trim();
+  if (bgFile) {
+    const bgPath = path.join(SCENE_DIR, path.basename(bgFile));
+    if (fs.existsSync(bgPath)) refsArr.push({ path: bgPath, label: 'BG', type: 'background' } as any);
+  }
+  console.log('[image_gen] refs:', refsArr.map((r: any) => (r.type||r.label) + ':' + r.path.split('/').pop()));
 
   const refsJson = JSON.stringify(refsArr);
   const args = [GEN_SCRIPT, prompt, outPath, GEMINI_KEY, refsJson, genModel, genAspect];
@@ -399,8 +456,10 @@ router.get('/client.js', requireAuth, (req, res) => {
   // casts + presets を並行取得
   Promise.all([
     fetch('${url('/image_gen/api/casts')}', { credentials: 'same-origin' }).then(function(r){ return r.json(); }),
-    fetch('${url('/image_gen/api/presets')}', { credentials: 'same-origin' }).then(function(r){ return r.json(); })
+    fetch('${url('/image_gen/api/presets')}', { credentials: 'same-origin' }).then(function(r){ return r.json(); }),
+    fetch('${url('/image_gen/api/scenes')}', { credentials: 'same-origin' }).then(function(r){ return r.json(); })
   ]).then(function(results) {
+    var scenes = results[2] || [];
     var casts = results[0];
     var presets = results[1];
     casts.forEach(function(c){ castMap[c.id] = c; });
@@ -424,6 +483,45 @@ router.get('/client.js', requireAuth, (req, res) => {
       modelSel.addEventListener('change', function() {
         var m = modelMap[modelSel.value];
         if (modelHint) modelHint.textContent = m ? m.note : '';
+      });
+    }
+    // シーン（背景）リスト
+    var sceneSel = document.getElementById('sceneSelect');
+    var scenePreviewWrap = document.getElementById('scenePreviewWrap');
+    var scenePreviewImg = document.getElementById('scenePreviewImg');
+    if (sceneSel && scenes.length > 0) {
+      scenes.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s.filename;
+        opt.textContent = s.filename;
+        sceneSel.appendChild(opt);
+      });
+      sceneSel.addEventListener('change', function() {
+        var sel = scenes.find(function(s){ return s.filename === sceneSel.value; });
+        if (sel) { scenePreviewImg.src = sel.url; scenePreviewWrap.style.display = 'block'; }
+        else { scenePreviewWrap.style.display = 'none'; }
+      });
+    }
+    // シーンアップロード
+    var btnSceneUpload = document.getElementById('btnSceneUpload');
+    var sceneUploadInput = document.getElementById('sceneUploadInput');
+    if (btnSceneUpload && sceneUploadInput) {
+      btnSceneUpload.addEventListener('click', function(){ sceneUploadInput.click(); });
+      sceneUploadInput.addEventListener('change', function() {
+        var file = sceneUploadInput.files && sceneUploadInput.files[0];
+        if (!file) return;
+        var fd = new FormData(); fd.append('file', file);
+        fetch('${url('/image_gen/upload/scene')}', { method:'POST', body: fd, credentials:'same-origin' })
+          .then(function(r){ return r.json(); })
+          .then(function(d) {
+            if (d.ok) {
+              var opt = document.createElement('option');
+              opt.value = d.filename; opt.textContent = d.filename;
+              sceneSel.appendChild(opt);
+              sceneSel.value = d.filename;
+              scenePreviewImg.src = d.url; scenePreviewWrap.style.display = 'block';
+            }
+          });
       });
     }
     initUI();
