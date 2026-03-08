@@ -11,36 +11,35 @@
   "styles": {
     "normal": {
       "description": "通常版（フード被り） — 綺麗めイラスト、LP・プロフィール向き",
-      "prompt_prefix": "Warm beige-toned soft illustration style, delicate linework, simple background, gentle colors, high quality illustration.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview",
-      "image": "teddy_main.jpg"
+      "image": "teddy_main.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
     },
     "normal-off": {
       "description": "通常版（フード脱ぎ） — 綺麗めイラスト、フードを下ろした状態",
-      "prompt_prefix": "Warm beige-toned soft illustration style, delicate linework, simple background, gentle colors, high quality illustration. The hood of the bear-ear hoodie is down.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview"
+      "prompt_features_override": null
     },
     "manga": {
       "description": "漫画版 — コミカル、noteエッセイ・挿絵向き",
-      "prompt_prefix": "Japanese manga style, comical and expressive, action lines and speech bubbles, exaggerated reactions, 4-koma manga taste. Warm beige tones.",
-      "prompt_features_override": null,
-      "model": "gemini-3-pro-image-preview"
+      "prompt_features_override": null
     },
     "dressup": {
       "description": "ドレスアップ版 — フォーマルイベント・パーティー向き",
-      "prompt_prefix": "Warm beige-toned soft illustration style, delicate linework, gentle colors, high quality illustration.",
-      "prompt_features_override": "anime girl with light brown bob-cut hair (hood down), wearing a white frilly dress, round bear ears visible on head, warm smile with slightly squinted eyes, rosy cheeks, elegant and cute appearance",
-      "model": "gemini-3-pro-image-preview",
-      "image": "teddy_sub.jpg"
+      "image": "teddy_sub.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "anime girl with light brown bob-cut hair (hood down), wearing a white frilly dress, round bear ears visible on head, warm smile with slightly squinted eyes, rosy cheeks, elegant and cute appearance"
     },
     "armored": {
       "description": "騎士鎧版 — siegeNginマスコット・バトルシーン向き",
-      "prompt_prefix": "Warm beige-toned soft illustration style, delicate linework, gentle colors, high quality illustration.",
-      "prompt_features_override": "anime girl with light brown bob-cut hair, wearing silver knight armor with blue surcoat emblazoned with a bear crest, round bear ears visible on helmet, determined expression, heroic and cute appearance",
-      "model": "gemini-3-pro-image-preview",
-      "image": "armored.jpg"
+      "image": "armored.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": "anime girl with light brown bob-cut hair, wearing silver knight armor with blue surcoat emblazoned with a bear crest, round bear ears visible on helmet, determined expression, heroic and cute appearance"
     }
   },
   "personality": {
@@ -49,5 +48,5 @@
     "role_description": "マスターのAIアシスタント。記憶・作業・通知・画像生成・コード開発など幅広く担当。bon-soleil HQの顔"
   },
   "avatars": {},
-  "updated_at": "2026-03-08T04:13:36.413Z"
+  "updated_at": "2026-03-08T05:44:49.276Z"
 }
