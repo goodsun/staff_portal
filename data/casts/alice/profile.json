@@ -5,7 +5,36 @@
   "base_prompt": "brown rabbit face leather bag, button eyes, small ears, gentle expression, kintsugi gold repair lines",
   "style_prompt": "warm manga art style, nostalgic, soft golden lighting",
   "negative_prompt": "realistic, photo, 3d render",
-  "tags": ["character", "bon-soleil"],
+  "tags": [
+    "character",
+    "bon-soleil"
+  ],
   "avatars": {},
-  "updated_at": "2026-03-08T00:00:00Z"
+  "updated_at": "2026-03-08T05:44:49.273Z",
+  "styles": {
+    "normal": {
+      "description": "通常版",
+      "image": "normal.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
+    },
+    "casual": {
+      "description": "カジュアル版",
+      "image": "casual.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
+    },
+    "manga": {
+      "description": "漫画風",
+      "image": "manga.jpg",
+      "overrides": [
+        "prompt_features"
+      ],
+      "prompt_features_override": null
+    }
+  }
 }
