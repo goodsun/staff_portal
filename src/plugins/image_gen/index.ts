@@ -11,6 +11,7 @@ const router = Router();
 
 const getGeminiKey = () => process.env.GEMINI_API_KEY ?? '';
 const GEN_SCRIPT = path.join(__dirname, 'gen.js');
+const NODE_BIN = process.execPath; // フルパス（launchd環境でもOK）
 const OUT_DIR = `${WS}/data/generated`;
 const CASTS_DIR = `${WS}/data/casts`;
 const IMAGE_GEN_DATA = `${WS}/data/presets`;
@@ -426,8 +427,9 @@ router.post('/api/generate', requireAuth, sceneUploader.none(), (req, res) => {
   if (!resolved) return res.status(400).json({ ok: false, error: 'prompt required or GEMINI_API_KEY missing' });
   const { prompt, args, filename, outPath } = resolved;
   console.log('[image_gen] api/generate prompt:', prompt.slice(0, 80));
-  execFile('node', args, { timeout: 90000, env: { ...process.env, HOME: '/home/node' } }, (err, _stdout, stderr) => {
+  execFile(NODE_BIN, args, { timeout: 90000, env: process.env }, (err, _stdout, stderr) => {
     if (err || !fs.existsSync(outPath)) {
+      console.error('[image_gen] generate error:', err?.message, stderr);
       return res.status(500).json({ ok: false, error: err?.message ?? 'generation failed', stderr });
     }
     res.json({ ok: true, filename, imgUrl: url('/image_gen/img/' + filename), downloadUrl: url('/image_gen/img/' + filename) });
@@ -440,7 +442,7 @@ router.post('/', requireAuth, (req, res) => {
   if (!resolved) return res.redirect(url('/image_gen'));
   const { prompt, args, filename, outPath } = resolved;
   console.log('[image_gen] POST / prompt:', prompt.slice(0, 80));
-  execFile('node', args, { timeout: 90000, env: { ...process.env, HOME: '/home/node' } }, (err, _stdout, stderr) => {
+  execFile(NODE_BIN, args, { timeout: 90000, env: process.env }, (err, _stdout, stderr) => {
     if (err || !fs.existsSync(outPath)) {
       const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span>
         <a href="${url('/image_gen')}">  <i class="fas fa-palette"></i> 画像生成</a></div>
