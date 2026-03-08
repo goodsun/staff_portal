@@ -65,24 +65,47 @@ npm run dev            # http://localhost:8800/mephi/
 | `LABO_AGENT` | エージェント名（ヘッダー表示） | — |
 | `GEMINI_API_KEY` | 画像生成用Gemini APIキー | — |
 
-### ⚠️ 本番デプロイ時の注意
+---
 
-**launchd / systemd 環境では `.env` が自動で読まれない**  
-→ plist や service ファイルに環境変数を直接記載する。
+## 🚧 本番デプロイ時の注意
 
-**`node` コマンドがPATHに存在しない場合がある**  
-→ `execFile('node', ...)` ではなく `execFile(process.execPath, ...)` を使う。  
-（labo-portal内部では対処済み）
+### launchd / systemd 環境
 
-**古い ts-node プロセスが残っていると `.env` が読まれない**  
-→ デプロイ時は必ず旧プロセスを終了してから起動する。
+**1. `node` コマンドが PATH にない**  
+launchd/systemd はログインシェルの PATH を継承しない。
+`node` を直接呼ぶと `command not found` になる。
+
 ```bash
-pkill -f 'ts-node\|node.*app'
+# ❌ NG
 node dist/app.js
+
+# ✅ フルパスで指定（which node で確認）
+/Users/teddy/.nvm/versions/node/v24.14.0/bin/node dist/app.js
+
+# ✅ または plist/service の EnvironmentVariables に PATH を追記
 ```
 
-**FormData を受け取るエンドポイントには multer が必要**  
-→ ファイルなしのフォームでも `uploader.none()` を忘れずに。
+**2. `.env` が自動で読まれない**  
+launchd/systemd はログインシェルの環境を持たない。  
+plist や `.service` ファイルに直接環境変数を記載するか、起動スクリプトで明示的に読み込む。
+
+```bash
+# 起動スクリプト例（wrapper.sh）
+#!/bin/bash
+set -a; source /home/node/labo_portal/.env; set +a
+exec /path/to/node /home/node/labo_portal/dist/app.js
+```
+
+**3. 古い ts-node / node プロセスが残る**  
+再デプロイ時に旧プロセスが残っていると `.env` の変更が反映されず、  
+ポートが競合して起動に失敗する。
+
+```bash
+# デプロイ前に必ず実行
+pkill -f 'ts-node|node.*app\.js'
+sleep 1
+node dist/app.js
+```
 
 ---
 
@@ -138,7 +161,7 @@ router.get('/', (req, res) => {
 
 export const meta = {
   name: 'Hello',
-  icon: '👋',
+  icon: 'fas fa-hand-wave',
   desc: 'テストプラグイン',
   layer: 'layer1' as const,
   url: '/hello',

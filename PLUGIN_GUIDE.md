@@ -150,6 +150,31 @@ const DATA_DIR = path.join(process.env.HOME!, 'data/my_plugin');
 
 ---
 
+## FormData を送るエンドポイントの注意
+
+ファイルを含まないフォーム（テキストのみ）でも、`multipart/form-data` で送る場合は  
+**必ず `uploader.none()` を通すこと。** 通さないと `req.body` が空になる。
+
+```typescript
+import { makeAssetUploader } from '../../core/upload';
+const uploader = makeAssetUploader(UPLOAD_DIR);
+
+// ✅ ファイルなし multipart → uploader.none()
+router.post('/api/generate', requireAuth, uploader.none(), (req, res) => {
+  const { prompt } = req.body; // ← none() なしだと undefined
+});
+
+// ✅ ファイルあり → uploader.single() / uploader.array()
+router.post('/upload', requireAuth, uploader.single('file'), (req, res) => {
+  // ...
+});
+```
+
+> **なぜ起きるか**: multer はリクエストの parse を担当する。  
+> multer なしで multipart リクエストを受けると Express は body を読まない。
+
+---
+
 ## チェックリスト
 
 プラグインを追加する前に確認：
@@ -160,6 +185,7 @@ const DATA_DIR = path.join(process.env.HOME!, 'data/my_plugin');
 - [ ] inline `<script>` や `onclick` 属性がない
 - [ ] ファイルパスがハードコードされている（`process.env.HOME` 不使用）
 - [ ] データは `workspace/data/` 以下に保存している
+- [ ] multipart エンドポイントに `uploader.none()` または `uploader.single()` がある
 
 ---
 
