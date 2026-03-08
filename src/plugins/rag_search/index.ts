@@ -63,6 +63,7 @@ function layout(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <title>${title} — labo-portal</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -124,10 +125,10 @@ router.get('/', requireAuth, async (req, res) => {
     <div class="header">
       <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
-      <span>🔍 RAG検索</span>
+      <span>  <i class="fas fa-search"></i> RAG検索</span>
     </div>
     <div class="main">
-      <h2>🔍 RAG検索</h2>
+      <h2>  <i class="fas fa-search"></i> RAG検索</h2>
 
       <div class="source-tabs">
         <a href="${url('/rag')}?source=local" class="source-tab${source==='local'?' active':''}">
@@ -243,10 +244,10 @@ router.post('/', requireAuth, async (req, res) => {
       <div class="header">
         <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
         <span class="sep">›</span>
-        <a href="${url('/rag')}?source=${source}">🔍 RAG検索</a>
+        <a href="${url('/rag')}?source=${source}">  <i class="fas fa-search"></i> RAG検索</a>
       </div>
       <div class="main">
-        <h2>🔍 RAG検索結果</h2>
+        <h2><i class="fas fa-search"></i> RAG検索結果</h2>
         <form method="post" action="${url('/rag')}" style="margin-bottom:20px">
           <input type="hidden" name="source" value="${source}">
           <div class="form-row">
@@ -276,10 +277,10 @@ router.post('/', requireAuth, async (req, res) => {
       <div class="header">
         <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
         <span class="sep">›</span>
-        <a href="${url('/rag')}?source=${source}">🔍 RAG検索</a>
+        <a href="${url('/rag')}?source=${source}">  <i class="fas fa-search"></i> RAG検索</a>
       </div>
       <div class="main">
-        <h2>🔍 RAG検索エラー</h2>
+        <h2><i class="fas fa-search"></i> RAG検索エラー</h2>
         <div class="error"><strong>エラー:</strong> ${err.message}</div>
         <p style="margin-top:16px"><a href="${url('/rag')}?source=${source}" style="color:#e94560">← 戻る</a></p>
       </div>`;

@@ -119,6 +119,7 @@ function layout(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <title>${title} — labo-portal</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -223,8 +224,8 @@ router.get('/cast-avatar/:id/:file', requireAuth, (req, res) => {
 // ── GET: フォーム ─────────────────────────────────
 router.get('/', requireAuth, (_req, res) => {
   if (!GEMINI_KEY) {
-    const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><span>🎨 画像生成</span></div>
-      <div class="main"><h2>🎨 Imagen 画像生成</h2><div class="error">GEMINI_API_KEY が設定されていません。</div></div>`;
+    const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><span>  <i class="fas fa-palette"></i> 画像生成</span></div>
+      <div class="main"><h2><i class="fas fa-palette"></i> Imagen 画像生成</h2><div class="error">GEMINI_API_KEY が設定されていません。</div></div>`;
     return res.send(layout('画像生成', body));
   }
 
@@ -251,15 +252,15 @@ router.get('/', requireAuth, (_req, res) => {
     <div class="header">
       <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
-      <span>🎨 画像生成</span>
+      <span>  <i class="fas fa-palette"></i> 画像生成</span>
     </div>
     <div class="main">
-      <h2>🎨 Imagen 画像生成</h2>
+      <h2><i class="fas fa-palette"></i> Imagen 画像生成</h2>
       <form method="post" action="${url('/image_gen')}" id="form">
 
         <!-- キャスト選択（複数） -->
         <div class="card">
-          <h3>🎭 キャスト（任意・複数可）</h3>
+          <h3><i class="fas fa-masks-theater"></i> キャスト（任意・複数可）</h3>
           <div id="castRows"></div>
           <button type="button" id="btnAddCast" class="btn btn-copy" style="margin-top:8px;font-size:.82em">＋ キャスト追加</button>
           <p class="hint" style="margin-top:6px">複数選択時はプロンプトでA/B/Cと指定: "A is standing, B is next to A"</p>
@@ -441,16 +442,16 @@ router.post('/', requireAuth, (req, res) => {
   execFile('node', args, { timeout: 90000, env: { ...process.env, HOME: '/home/node' } }, (err, _stdout, stderr) => {
     if (err || !fs.existsSync(outPath)) {
       const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span>
-        <a href="${url('/image_gen')}">🎨 画像生成</a></div>
-        <div class="main"><h2>🎨 生成エラー</h2>
+        <a href="${url('/image_gen')}">  <i class="fas fa-palette"></i> 画像生成</a></div>
+        <div class="main"><h2><i class="fas fa-palette"></i> 生成エラー</h2>
           <div class="error">${err?.message ?? 'Unknown error'}<br>
             <pre style="margin-top:8px;font-size:.85em;white-space:pre-wrap">${stderr}</pre></div>
           <p style="margin-top:16px"><a href="${url('/image_gen')}" style="color:#e94560">← 戻る</a></p></div>`;
       return res.send(layout('生成エラー', body));
     }
     const body = `<div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span>
-      <a href="${url('/image_gen')}">🎨 画像生成</a></div>
-      <div class="main"><h2>🎨 生成完了</h2>
+      <a href="${url('/image_gen')}">  <i class="fas fa-palette"></i> 画像生成</a></div>
+      <div class="main"><h2><i class="fas fa-palette"></i> 生成完了</h2>
         <div class="img-wrap"><img src="${url('/image_gen/img/' + filename)}" alt="generated">
           <p class="prompt-echo">「${prompt.replace(/</g,'&lt;').slice(0,120)}${prompt.length>120?'…':''}」</p></div>
         <div style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap">
@@ -776,7 +777,7 @@ router.get('/client.js', requireAuth, (req, res) => {
         .then(function(r) { return r.json(); })
         .then(function(d) {
           btnGen.disabled = false;
-          btnGen.textContent = '🎨 生成する';
+          btnGen.textContent = '<i class="fas fa-palette"></i> 生成する';
           if (d.ok) {
             if (resultImg) resultImg.src = d.imgUrl;
             if (resultDownload) { resultDownload.href = d.downloadUrl; resultDownload.download = d.filename; }
@@ -792,7 +793,7 @@ router.get('/client.js', requireAuth, (req, res) => {
         })
         .catch(function(e) {
           btnGen.disabled = false;
-          btnGen.textContent = '🎨 生成する';
+          btnGen.textContent = '<i class="fas fa-palette"></i> 生成する';
           if (resultError) { resultError.textContent = 'ネットワークエラー: ' + e.message; resultError.style.display = 'block'; }
           if (resultPanel) resultPanel.style.display = 'block';
         });

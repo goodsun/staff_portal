@@ -74,6 +74,7 @@ function layout(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <title>${title} — labo-portal</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -120,7 +121,7 @@ function headerHtml(sub?: string): string {
   return `<div class="header">
     <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
     <span class="sep">›</span>
-    <a href="${url('/cast_manager')}">🎭 キャスト</a>
+    <a href="${url('/cast_manager')}">  <i class="fas fa-masks-theater"></i> キャスト</a>
     ${sub ? `<span class="sep">›</span><span>${sub}</span>` : ''}
   </div>`;
 }
@@ -164,7 +165,7 @@ router.get('/', requireAuth, (req, res) => {
     ${headerHtml()}
     <div class="main">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h2>🎭 キャスト管理</h2>
+        <h2><i class="fas fa-masks-theater"></i> キャスト管理</h2>
         <a href="${url('/cast_manager/new')}" class="btn btn-primary">＋ 新規キャスト</a>
       </div>
       ${msg === 'saved' ? '<div class="alert alert-ok">✅ 保存しました</div>' : ''}
