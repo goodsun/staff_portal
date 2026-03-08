@@ -598,7 +598,7 @@ router.post('/delete-collection', requireAuth, async (req, res) => {
 
 export const meta = {
   name: 'RAG管理',
-  icon: '🧬',
+  icon: 'fas fa-dna',
   desc: 'ローカルRAGコンテナの管理・データ投入',
   layer: 'layer2' as const,
   url: '/rag_admin',

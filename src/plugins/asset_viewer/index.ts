@@ -376,7 +376,7 @@ router.post('/upload', requireAuth, (req, res) => {
 
 export const meta = {
   name: 'Asset Viewer',
-  icon: '🖼',
+  icon: 'fas fa-images',
   desc: '画像・動画・3Dモデルの表示＆アップロード',
   layer: 'core' as const,
   url: '/assets',

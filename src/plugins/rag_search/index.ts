@@ -289,7 +289,7 @@ router.post('/', requireAuth, async (req, res) => {
 
 export const meta = {
   name: 'RAG検索',
-  icon: '🔍',
+  icon: 'fas fa-search',
   desc: 'ローカル ChromaDB / HQ pgvector で知識ベースを検索',
   layer: 'layer2' as const,
   url: '/rag',

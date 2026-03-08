@@ -22,14 +22,14 @@ const SERVICES: ServiceDef[] = [
   {
     id: 'labo_portal',
     name: 'labo-portal',
-    icon: '🏭',
+    icon: 'fas fa-industry',
     check: "ps aux | grep 'ts-node.*app.ts' | grep -v grep",
     logFile: '/tmp/labo_portal.log',
   },
   {
     id: 'openclaw',
     name: 'OpenClaw Gateway',
-    icon: '🦀',
+    icon: 'fas fa-cube',
     check: "ps aux | grep 'openclaw' | grep -v grep",
   },
 ];
@@ -177,7 +177,7 @@ router.get('/log', requireAuth, async (req, res) => {
 
 export const meta = {
   name: 'サービス',
-  icon: '⚙️',
+  icon: 'fas fa-cog',
   desc: 'プロセス状態・ログ確認',
   layer: 'core' as const,
   url: '/services',

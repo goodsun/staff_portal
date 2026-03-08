@@ -32,6 +32,7 @@ const loginPage = (error = '') => `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${NAME} — Login</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#e0e0e0;
@@ -48,7 +49,7 @@ const loginPage = (error = '') => `<!DOCTYPE html>
   .error{color:#e94560;font-size:.85em;margin-bottom:12px}
 </style></head><body>
 <div class="box">
-  <h1>🏭 ${NAME}</h1>
+  <h1><i class="fas fa-industry"></i> ${NAME}</h1>
   ${AGENT ? `<div class="agent">${AGENT}</div>` : ''}
   ${error ? `<div class="error">${error}</div>` : ''}
   <form method="post" action="${url('/login')}">
@@ -83,7 +84,7 @@ router.get('/logout', (req, res) => {
 router.get('/', requireAuth, (_req, res) => {
   const cards = registry.map(p => `
     <a href="${url(p.url)}" class="card">
-      <div class="icon">${p.icon}</div>
+      <div class="icon"><i class="${p.icon}"></i></div>
       <div class="name">${p.name}<span class="badge">${p.layer}</span></div>
       <div class="desc">${p.desc}</div>
     </a>`).join('');
@@ -92,6 +93,7 @@ router.get('/', requireAuth, (_req, res) => {
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${NAME}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh}
@@ -114,7 +116,7 @@ router.get('/', requireAuth, (_req, res) => {
   .empty{color:#888}
 </style></head><body>
 <div class="header">
-  <h1>🏭 ${NAME}</h1>
+  <h1><i class="fas fa-industry"></i> ${NAME}</h1>
   <div class="meta">
     ${AGENT ? `<span>${AGENT}</span>` : ''}
     <a href="${url('/logout')}">ログアウト</a>

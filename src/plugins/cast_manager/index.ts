@@ -332,7 +332,7 @@ router.post('/:id/delete', requireAuth, (req, res) => {
 
 export const meta = {
   name: 'キャスト',
-  icon: '🎭',
+  icon: 'fas fa-masks-theater',
   desc: 'キャラクター管理（画像・プロンプトセット）',
   layer: 'layer2' as const,
   url: '/cast_manager',

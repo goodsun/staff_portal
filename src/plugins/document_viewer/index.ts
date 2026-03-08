@@ -269,7 +269,7 @@ router.post('/upload', requireAuth, (req, res) => {
 
 export const meta = {
   name: 'Document Viewer',
-  icon: '📄',
+  icon: 'fas fa-file-alt',
   desc: 'Markdown・テキスト・設定ファイルを表示＆アップロード',
   layer: 'core' as const,
   url: '/docs',

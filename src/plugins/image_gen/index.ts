@@ -335,9 +335,9 @@ router.get('/', requireAuth, (_req, res) => {
         <input type="hidden" name="final_prompt" id="finalPrompt">
 
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <button type="button" id="btnPreview" class="btn btn-copy">🔍 プロンプト確認</button>
-          <button type="button" id="btnCopy" class="btn btn-copy" style="display:none">📋 コピー</button>
-          <button type="button" id="btnGen" class="btn btn-primary">🎨 生成する</button>
+          <button type="button" id="btnPreview" class="btn btn-copy"><i class="fas fa-search"></i> プロンプト確認</button>
+          <button type="button" id="btnCopy" class="btn btn-copy" style="display:none"><i class="fas fa-copy"></i> コピー</button>
+          <button type="button" id="btnGen" class="btn btn-primary"><i class="fas fa-palette"></i> 生成する</button>
         </div>
         <p class="hint" style="margin-top:8px">生成には10〜30秒かかります</p>
       </form>
@@ -815,7 +815,7 @@ router.get('/img/:filename', requireAuth, (req, res) => {
 
 export const meta = {
   name: '画像生成',
-  icon: '🎨',
+  icon: 'fas fa-palette',
   desc: 'Imagenで画像生成（キャスト選択・dry-run対応）',
   layer: 'layer2' as const,
   url: '/image_gen',
