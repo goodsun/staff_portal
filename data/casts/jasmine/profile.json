@@ -1,0 +1,43 @@
+{
+  "name": "Jasmine",
+  "display_name": "Jasmine",
+  "emoji": "",
+  "role": "",
+  "division": "",
+  "hire_date": "",
+  "character": "Jasmine（ジャスミン）: XPathGenieのマスコット。南アジア・中東風の美しい若い女性。艶やかな黒髪ロング、褐色の肌、大きなダークブラウンの瞳。紫と金の中東風衣装。XPathGenieのJoin機能（セクション選択UI）の顔。",
+  "prompt_features": "beautiful young woman with South Asian/Middle Eastern appearance, long wavy black hair with white flower accessory, brown skin, large dark eyes with eyeliner, gold hoop earrings, purple and gold Middle Eastern-style crop top and harem pants with gold embroidery, gold bangles",
+  "default_style": "normal",
+  "styles": {
+    "normal": {
+      "description": "アプリ正式版 — ディズニー風、上品",
+      "prompt_prefix": "Disney-style illustration, vibrant colors, high quality, detailed costume.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview",
+      "image": "main.jpg"
+    },
+    "corp": {
+      "description": "コーポレート/note用 — アニメ風、親しみやすい",
+      "prompt_prefix": "Warm anime-style illustration, NOT photorealistic, friendly and approachable, high quality.",
+      "prompt_features_override": "anime girl, dark tan skin, long wavy dark purple hair reaching past waist, purple eyes, confident smirk, gold headpiece chain with purple teardrop gem on forehead, gold teardrop earrings, gold choker necklace with purple pendant, purple off-shoulder crop top with gold trim and gold decorative swirl patterns on bust, sheer purple long sleeves, exposed midriff, gold upper arm bands on both arms, gold wrist cuffs, purple baggy harem pants with gold waistband, gold ankle cuffs, gold strappy flat sandals, Arabian dancer outfit, hand on hip pose",
+      "model": "gemini-3-pro-image-preview",
+      "image": "corp.jpg"
+    },
+    "hair_down": {
+      "description": "髪ほどきバージョン — カジュアル・リラックス",
+      "prompt_prefix": "Disney-style illustration, vibrant colors, high quality, detailed costume. Hair is loose and down.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview",
+      "image": "hair_down.jpg"
+    },
+    "manga": {
+      "description": "漫画版 — コミカル",
+      "prompt_prefix": "Japanese manga style, comical and expressive, exaggerated reactions, warm tones.",
+      "prompt_features_override": null,
+      "model": "gemini-3-pro-image-preview"
+    }
+  },
+  "personality": {},
+  "avatars": {},
+  "updated_at": "2026-03-08T04:13:36.409Z"
+}
