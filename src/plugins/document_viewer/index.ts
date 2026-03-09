@@ -12,7 +12,8 @@ const router = Router();
 const DOC_ROOT    = `${WS}/data/docs`;
 const DRAFTS_ROOT = `${WS}/data/drafts`;
 const UPLOAD_DIR  = `${WS}/data/docs`;
-const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py', '.pdf', '.html', '.htm']);
+const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py', '.pdf', '.html', '.htm', '.png', '.jpg', '.jpeg', '.gif', '.webp']);
+const IMAGE_EXTS   = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 
 // タブ → ルートディレクトリ
 function resolveRoot(tab: string): string {
@@ -102,12 +103,14 @@ router.get('/', requireAuth, (req, res) => {
     const childRel = rel ? `${rel}/${e.name}` : e.name;
     const ext = path.extname(e.name).toLowerCase();
     const isPdf = ext === '.pdf';
+    const isImg = IMAGE_EXTS.has(ext);
     const href = e.isDir
       ? `${url('/docs')}?tab=${tab}&path=${encodeURIComponent(childRel)}`
       : isPdf
         ? `${url('/docs/raw')}?tab=${tab}&path=${encodeURIComponent(childRel)}`
         : `${url('/docs/view')}?tab=${tab}&path=${encodeURIComponent(childRel)}`;
     const linkAttr = isPdf ? `target="_blank"` : '';
+    const icon = e.isDir ? '📁' : isPdf ? '📑' : isImg ? '🖼' : tab === 'drafts' ? '📝' : '📄';
     const delBtn = !e.isDir
       ? `<form method="post" action="${url('/docs/delete')}" style="margin-left:auto;display:flex"
            onsubmit="return confirm('「${e.name}」を削除しますか？\\nこの操作は元に戻せません。');event.stopPropagation()">
@@ -122,7 +125,7 @@ router.get('/', requireAuth, (req, res) => {
       : '';
     return `<li style="display:flex;align-items:center">
       <a href="${href}" ${linkAttr} style="display:flex;align-items:center;gap:10px;flex:1;padding:8px 0;color:#e0e0e0;text-decoration:none">
-        <span>${e.isDir ? '📁' : isPdf ? '📑' : tab === 'drafts' ? '📝' : '📄'}</span>${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}
+        <span>${icon}</span>${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}
       </a>
       ${delBtn}
     </li>`;
@@ -160,10 +163,25 @@ router.get('/view', requireAuth, (req, res) => {
     return res.redirect(`${url('/docs/raw')}?tab=${tab}&path=${encodeURIComponent(rel)}`);
   }
 
+  const isImage = IMAGE_EXTS.has(ext);
   const filename = path.basename(full);
   const dirRel = path.dirname(rel);
-  const rawContent = fs.readFileSync(full, 'utf-8');
+  const rawContent = isImage ? '' : fs.readFileSync(full, 'utf-8');
   const escaped = rawContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  let contentHtml: string;
+  if (isImage) {
+    contentHtml = `<div style="text-align:center;padding:16px">
+      <img src="${url('/docs/raw')}?tab=${tab}&path=${encodeURIComponent(rel)}"
+           alt="${filename}"
+           style="max-width:100%;border-radius:8px;border:1px solid #0f3460;box-shadow:0 4px 24px rgba(0,0,0,.5)">
+    </div>`;
+  } else if (ext === '.md') {
+    contentHtml = `<div class="markdown-body" id="md"></div>
+      <script>document.getElementById('md').innerHTML=marked.parse(${JSON.stringify(rawContent)});</script>`;
+  } else {
+    contentHtml = `<pre style="background:#16213e;padding:24px;border-radius:8px;border:1px solid #0f3460;overflow-x:auto;line-height:1.5;font-size:.9em">${escaped}</pre>`;
+  }
 
   const body = `
     <div class="header">
@@ -186,11 +204,7 @@ router.get('/view', requireAuth, (req, res) => {
       </form>
     </div>
     <div class="main">
-      ${ext === '.md'
-        ? `<div class="markdown-body" id="md"></div>
-           <script>document.getElementById('md').innerHTML=marked.parse(${JSON.stringify(rawContent)});</script>`
-        : `<pre style="background:#16213e;padding:24px;border-radius:8px;border:1px solid #0f3460;overflow-x:auto;line-height:1.5;font-size:.9em">${escaped}</pre>`
-      }
+      ${contentHtml}
     </div>`;
 
   res.send(layout(filename, body));
@@ -219,7 +233,10 @@ router.get('/raw', requireAuth, (req, res) => {
   if (!full || !fs.existsSync(full)) return res.status(404).send('Not found');
   const ext = path.extname(full).toLowerCase();
   if (!ALLOWED_EXTS.has(ext)) return res.status(403).send('Forbidden');
-  res.setHeader('Content-Disposition', `attachment; filename="${path.basename(full)}"`);
+  // 画像はインライン配信（<img>タグで表示できるよう Content-Disposition なし）
+  if (!IMAGE_EXTS.has(ext)) {
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(full)}"`);
+  }
   res.sendFile(full);
 });
 
@@ -305,7 +322,7 @@ router.post('/upload', requireAuth, (req, res) => {
 export const meta = {
   name: 'Document Viewer',
   icon: 'fas fa-file-alt',
-  desc: 'Markdown・テキスト・設計書を表示。下書きタブで drafts/ も参照可。',
+  desc: 'Markdown・テキスト・設計書を表示。下書きタブで drafts/ も参照可。画像表示対応。',
   layer: 'core' as const,
   url: '/docs',
 };
