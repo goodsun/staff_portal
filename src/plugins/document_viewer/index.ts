@@ -116,8 +116,13 @@ router.get('/', requireAuth, (req, res) => {
         : `${url('/docs/view')}?tab=${tab}&path=${encodeURIComponent(childRel)}`;
     const linkAttr = isPdf ? `target="_blank"` : '';
     const icon = e.isDir ? '📁' : isPdf ? '📑' : isImg ? '🖼' : tab === 'drafts' ? '📝' : '📄';
+    const thumbHtml = isImg
+      ? `<img src="${url('/docs/raw')}?tab=${tab}&path=${encodeURIComponent(childRel)}"
+            style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid #333;flex-shrink:0"
+            loading="lazy" alt="${e.name}">`
+      : `<span style="font-size:1.4em;width:64px;text-align:center;flex-shrink:0">${icon}</span>`;
     const delBtn = !e.isDir
-      ? `<form method="post" action="${url('/docs/delete')}" style="margin-left:auto;display:flex"
+      ? `<form method="post" action="${url('/docs/delete')}" style="margin-left:auto;display:flex;align-items:center"
            onsubmit="return confirm('「${e.name}」を削除しますか？\\nこの操作は元に戻せません。');event.stopPropagation()">
            <input type="hidden" name="tab" value="${tab}">
            <input type="hidden" name="path" value="${childRel}">
@@ -128,9 +133,10 @@ router.get('/', requireAuth, (req, res) => {
              onmouseleave="this.style.color='#555';this.style.borderColor='#333'">🗑</button>
          </form>`
       : '';
-    return `<li style="display:flex;align-items:center">
-      <a href="${href}" ${linkAttr} style="display:flex;align-items:center;gap:10px;flex:1;padding:8px 0;color:#e0e0e0;text-decoration:none">
-        <span>${icon}</span>${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}
+    return `<li style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #0f3460">
+      <a href="${href}" ${linkAttr} style="display:flex;align-items:center;gap:12px;flex:1;color:#e0e0e0;text-decoration:none">
+        ${thumbHtml}
+        <span style="font-size:.9em;word-break:break-all">${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}</span>
       </a>
       ${delBtn}
     </li>`;
