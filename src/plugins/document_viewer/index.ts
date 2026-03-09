@@ -10,14 +10,17 @@ const url = (p: string) => `${BASE}${p}`;
 
 const router = Router();
 const DOC_ROOT    = `${WS}/data/docs`;
-const DRAFTS_ROOT = `${WS}/data/drafts`;
+const DRAFTS_ROOT    = `${WS}/data/drafts`;
+const GENERATED_ROOT = `${WS}/data/generated`;
 const UPLOAD_DIR  = `${WS}/data/docs`;
 const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py', '.pdf', '.html', '.htm', '.png', '.jpg', '.jpeg', '.gif', '.webp']);
 const IMAGE_EXTS   = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 
 // タブ → ルートディレクトリ
 function resolveRoot(tab: string): string {
-  return tab === 'drafts' ? DRAFTS_ROOT : DOC_ROOT;
+  if (tab === 'drafts') return DRAFTS_ROOT;
+  if (tab === 'generated') return GENERATED_ROOT;
+  return DOC_ROOT;
 }
 
 function safeJoin(base: string, rel: string): string | null {
@@ -28,7 +31,8 @@ function safeJoin(base: string, rel: string): string | null {
 function tabBar(activeTab: string): string {
   const tabs = [
     { key: 'docs',   label: '<i class="fas fa-file-alt"></i> ドキュメント' },
-    { key: 'drafts', label: '<i class="fas fa-pencil-alt"></i> 下書き' },
+    { key: 'drafts',     label: '<i class="fas fa-pencil-alt"></i> 下書き' },
+    { key: 'generated', label: '<i class="fas fa-images"></i> 生成画像' },
   ];
   return `<div style="display:flex;gap:4px;margin-bottom:20px">
     ${tabs.map(t => `
@@ -72,7 +76,8 @@ function layout(title: string, body: string): string {
 
 // ディレクトリ一覧（タブ対応）
 router.get('/', requireAuth, (req, res) => {
-  const tab = (req.query.tab as string ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const tabRaw = req.query.tab as string ?? 'docs';
+  const tab = tabRaw === 'drafts' ? 'drafts' : tabRaw === 'generated' ? 'generated' : 'docs';
   const ROOT = resolveRoot(tab);
   const rel = (req.query.path as string ?? '').replace(/\.\./g, '').replace(/^\//, '');
   const full = safeJoin(ROOT, rel);
@@ -150,7 +155,8 @@ router.get('/', requireAuth, (req, res) => {
 
 // ファイル表示（タブ対応）
 router.get('/view', requireAuth, (req, res) => {
-  const tab = (req.query.tab as string ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const tabRaw = req.query.tab as string ?? 'docs';
+  const tab = tabRaw === 'drafts' ? 'drafts' : tabRaw === 'generated' ? 'generated' : 'docs';
   const ROOT = resolveRoot(tab);
   const rel = (req.query.path as string ?? '').replace(/\.\./g, '').replace(/^\//, '');
   const full = safeJoin(ROOT, rel);
@@ -212,7 +218,8 @@ router.get('/view', requireAuth, (req, res) => {
 
 // ファイル削除（タブ対応）
 router.post('/delete', requireAuth, (req, res) => {
-  const tab = (req.body.tab ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const tabRaw = req.body.tab ?? 'docs';
+  const tab = tabRaw === 'drafts' ? 'drafts' : tabRaw === 'generated' ? 'generated' : 'docs';
   const ROOT = resolveRoot(tab);
   const rel = (req.body.path ?? '').replace(/\.\./g, '').replace(/^\//, '');
   const back = (req.body.back ?? '').replace(/\.\./g, '').replace(/^\//, '');
@@ -226,7 +233,8 @@ router.post('/delete', requireAuth, (req, res) => {
 
 // 生ファイル配信（タブ対応）
 router.get('/raw', requireAuth, (req, res) => {
-  const tab = (req.query.tab as string ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const tabRaw = req.query.tab as string ?? 'docs';
+  const tab = tabRaw === 'drafts' ? 'drafts' : tabRaw === 'generated' ? 'generated' : 'docs';
   const ROOT = resolveRoot(tab);
   const rel = (req.query.path as string ?? '').replace(/\.\./g, '').replace(/^\//, '');
   const full = safeJoin(ROOT, rel);
@@ -322,7 +330,7 @@ router.post('/upload', requireAuth, (req, res) => {
 export const meta = {
   name: 'Document Viewer',
   icon: 'fas fa-file-alt',
-  desc: 'Markdown・テキスト・設計書を表示。下書きタブで drafts/ も参照可。画像表示対応。',
+  desc: 'Markdown・テキスト・設計書を表示。下書き・生成画像タブも参照可。',
   layer: 'core' as const,
   url: '/docs',
 };
