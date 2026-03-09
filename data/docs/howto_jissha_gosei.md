@@ -62,9 +62,11 @@ EOF
 ### API呼び出し例
 
 ```bash
+# BASE_URLは環境に合わせて変更（bizeny: /labo, mephi: /mephi, hq: /hq）
+BASE_URL="http://localhost:8800/labo"
 API_KEY=$(grep LABO_API_KEY ~/labo_portal/.env | cut -d= -f2)
 
-curl -s -X POST http://localhost:8800/labo/image_gen/api/generate \
+curl -s -X POST "${BASE_URL}/image_gen/api/generate" \
   -H "X-API-Key: ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -160,3 +162,4 @@ OKいただけますか？
 ---
 
 *文責: 彰子（Web3事業部）*
+
