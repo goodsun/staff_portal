@@ -9,13 +9,36 @@ const WS = process.env.WORKSPACE_ROOT ?? '/home/node/.openclaw/workspace';
 const url = (p: string) => `${BASE}${p}`;
 
 const router = Router();
-const DOC_ROOT = `${WS}/data/docs`;
-const UPLOAD_DIR = `${WS}/data/docs`;
+const DOC_ROOT    = `${WS}/data/docs`;
+const DRAFTS_ROOT = `${WS}/data/drafts`;
+const UPLOAD_DIR  = `${WS}/data/docs`;
 const ALLOWED_EXTS = new Set(['.md', '.txt', '.json', '.yaml', '.yml', '.sh', '.ts', '.js', '.py', '.pdf', '.html', '.htm']);
+
+// タブ → ルートディレクトリ
+function resolveRoot(tab: string): string {
+  return tab === 'drafts' ? DRAFTS_ROOT : DOC_ROOT;
+}
 
 function safeJoin(base: string, rel: string): string | null {
   const full = path.resolve(base, rel);
   return full.startsWith(base) ? full : null;
+}
+
+function tabBar(activeTab: string): string {
+  const tabs = [
+    { key: 'docs',   label: '<i class="fas fa-file-alt"></i> ドキュメント' },
+    { key: 'drafts', label: '<i class="fas fa-pencil-alt"></i> 下書き' },
+  ];
+  return `<div style="display:flex;gap:4px;margin-bottom:20px">
+    ${tabs.map(t => `
+      <a href="${url('/docs')}?tab=${t.key}"
+        style="padding:8px 18px;border-radius:6px 6px 0 0;text-decoration:none;font-size:.88em;font-weight:600;
+               ${t.key === activeTab
+                 ? 'background:#e94560;color:#fff;'
+                 : 'background:#16213e;color:#888;border:1px solid #0f3460;'}">
+        ${t.label}
+      </a>`).join('')}
+  </div>`;
 }
 
 function layout(title: string, body: string): string {
@@ -46,14 +69,16 @@ function layout(title: string, body: string): string {
 </style></head><body>${body}</body></html>`;
 }
 
-// ディレクトリ一覧
+// ディレクトリ一覧（タブ対応）
 router.get('/', requireAuth, (req, res) => {
+  const tab = (req.query.tab as string ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const ROOT = resolveRoot(tab);
   const rel = (req.query.path as string ?? '').replace(/\.\./g, '').replace(/^\//, '');
-  const full = safeJoin(DOC_ROOT, rel);
+  const full = safeJoin(ROOT, rel);
   if (!full || !fs.existsSync(full)) return res.status(404).send('Not found');
 
   if (!fs.statSync(full).isDirectory()) {
-    return res.redirect(`${url('/docs/view')}?path=${encodeURIComponent(rel)}`);
+    return res.redirect(`${url('/docs/view')}?tab=${tab}&path=${encodeURIComponent(rel)}`);
   }
 
   const entries = fs.readdirSync(full).map(name => {
@@ -66,10 +91,10 @@ router.get('/', requireAuth, (req, res) => {
 
   const relParts = rel.split('/').filter(Boolean);
   const crumbs = [
-    `<a href="${url('/docs')}">workspace</a>`,
+    `<a href="${url('/docs')}?tab=${tab}">${tab === 'drafts' ? '下書き' : 'workspace'}</a>`,
     ...relParts.map((p, i) => {
       const link = relParts.slice(0, i + 1).join('/');
-      return `<a href="${url('/docs')}?path=${encodeURIComponent(link)}">${p}</a>`;
+      return `<a href="${url('/docs')}?tab=${tab}&path=${encodeURIComponent(link)}">${p}</a>`;
     })
   ].join(' <span class="sep">›</span> ');
 
@@ -78,14 +103,15 @@ router.get('/', requireAuth, (req, res) => {
     const ext = path.extname(e.name).toLowerCase();
     const isPdf = ext === '.pdf';
     const href = e.isDir
-      ? `${url('/docs')}?path=${encodeURIComponent(childRel)}`
+      ? `${url('/docs')}?tab=${tab}&path=${encodeURIComponent(childRel)}`
       : isPdf
-        ? `${url('/docs/raw')}?path=${encodeURIComponent(childRel)}`
-        : `${url('/docs/view')}?path=${encodeURIComponent(childRel)}`;
+        ? `${url('/docs/raw')}?tab=${tab}&path=${encodeURIComponent(childRel)}`
+        : `${url('/docs/view')}?tab=${tab}&path=${encodeURIComponent(childRel)}`;
     const linkAttr = isPdf ? `target="_blank"` : '';
     const delBtn = !e.isDir
       ? `<form method="post" action="${url('/docs/delete')}" style="margin-left:auto;display:flex"
            onsubmit="return confirm('「${e.name}」を削除しますか？\\nこの操作は元に戻せません。');event.stopPropagation()">
+           <input type="hidden" name="tab" value="${tab}">
            <input type="hidden" name="path" value="${childRel}">
            <input type="hidden" name="back" value="${rel}">
            <button type="submit" title="削除"
@@ -96,7 +122,7 @@ router.get('/', requireAuth, (req, res) => {
       : '';
     return `<li style="display:flex;align-items:center">
       <a href="${href}" ${linkAttr} style="display:flex;align-items:center;gap:10px;flex:1;padding:8px 0;color:#e0e0e0;text-decoration:none">
-        <span>${e.isDir ? '📁' : isPdf ? '📑' : '📄'}</span>${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}
+        <span>${e.isDir ? '📁' : isPdf ? '📑' : tab === 'drafts' ? '📝' : '📄'}</span>${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}
       </a>
       ${delBtn}
     </li>`;
@@ -108,28 +134,30 @@ router.get('/', requireAuth, (req, res) => {
       <span class="sep">›</span>
       <span class="bc">${crumbs}</span>
       <span style="flex:1"></span>
-      <a href="${url('/docs/upload')}${rel ? '?path=' + encodeURIComponent(rel) : ''}"
-        style="padding:6px 14px;background:#e94560;color:#fff;border-radius:5px;text-decoration:none;font-size:.82em;font-weight:600">📤 アップロード</a>
+      ${tab === 'docs' ? `<a href="${url('/docs/upload')}${rel ? '?path=' + encodeURIComponent(rel) : ''}"
+        style="padding:6px 14px;background:#e94560;color:#fff;border-radius:5px;text-decoration:none;font-size:.82em;font-weight:600">📤 アップロード</a>` : ''}
     </div>
     <div class="main">
+      ${tabBar(tab)}
       <ul class="dir-list">${items || '<li style="color:#888;padding:12px 0">（空のディレクトリ）</li>'}</ul>
     </div>`;
 
-  res.send(layout(rel || 'workspace', body));
+  res.send(layout(rel || (tab === 'drafts' ? '下書き' : 'workspace'), body));
 });
 
-// ファイル表示
+// ファイル表示（タブ対応）
 router.get('/view', requireAuth, (req, res) => {
+  const tab = (req.query.tab as string ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const ROOT = resolveRoot(tab);
   const rel = (req.query.path as string ?? '').replace(/\.\./g, '').replace(/^\//, '');
-  const full = safeJoin(DOC_ROOT, rel);
+  const full = safeJoin(ROOT, rel);
   if (!full || !fs.existsSync(full)) return res.status(404).send('Not found');
 
   const ext = path.extname(full).toLowerCase();
   if (!ALLOWED_EXTS.has(ext)) return res.status(403).send('Forbidden');
 
-  // PDFはrawで新タブ表示
   if (ext === '.pdf') {
-    return res.redirect(`${url('/docs/raw')}?path=${encodeURIComponent(rel)}`);
+    return res.redirect(`${url('/docs/raw')}?tab=${tab}&path=${encodeURIComponent(rel)}`);
   }
 
   const filename = path.basename(full);
@@ -141,15 +169,16 @@ router.get('/view', requireAuth, (req, res) => {
     <div class="header">
       <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
       <span class="sep">›</span>
-      <a class="bc" href="${url('/docs')}?path=${encodeURIComponent(dirRel)}">${dirRel}</a>
+      <a class="bc" href="${url('/docs')}?tab=${tab}&path=${encodeURIComponent(dirRel)}">${tab === 'drafts' ? '下書き' : dirRel}</a>
       <span class="sep">›</span>
       <span>${filename}</span>
       <span style="flex:1"></span>
-      <a href="${url('/docs/raw')}?path=${encodeURIComponent(rel)}" download="${filename}"
+      <a href="${url('/docs/raw')}?tab=${tab}&path=${encodeURIComponent(rel)}" download="${filename}"
         style="padding:6px 14px;background:#0f3460;color:#8be9fd;border-radius:5px;text-decoration:none;font-size:.82em;font-weight:600">⬇ DL</a>
       <span style="flex:1"></span>
       <form method="post" action="${url('/docs/delete')}" style="display:inline"
         onsubmit="return confirm('「${filename}」を削除しますか？\\nこの操作は元に戻せません。')">
+        <input type="hidden" name="tab" value="${tab}">
         <input type="hidden" name="path" value="${rel}">
         <input type="hidden" name="back" value="${dirRel}">
         <button type="submit"
@@ -167,22 +196,26 @@ router.get('/view', requireAuth, (req, res) => {
   res.send(layout(filename, body));
 });
 
-// ファイル削除
+// ファイル削除（タブ対応）
 router.post('/delete', requireAuth, (req, res) => {
+  const tab = (req.body.tab ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const ROOT = resolveRoot(tab);
   const rel = (req.body.path ?? '').replace(/\.\./g, '').replace(/^\//, '');
   const back = (req.body.back ?? '').replace(/\.\./g, '').replace(/^\//, '');
-  const full = safeJoin(DOC_ROOT, rel);
+  const full = safeJoin(ROOT, rel);
   if (full && fs.existsSync(full) && !fs.statSync(full).isDirectory()) {
     const ext = path.extname(full).toLowerCase();
     if (ALLOWED_EXTS.has(ext)) fs.unlinkSync(full);
   }
-  res.redirect(`${url('/docs')}?path=${encodeURIComponent(back)}`);
+  res.redirect(`${url('/docs')}?tab=${tab}&path=${encodeURIComponent(back)}`);
 });
 
-// 生ファイル配信（ダウンロード用）
+// 生ファイル配信（タブ対応）
 router.get('/raw', requireAuth, (req, res) => {
+  const tab = (req.query.tab as string ?? 'docs') === 'drafts' ? 'drafts' : 'docs';
+  const ROOT = resolveRoot(tab);
   const rel = (req.query.path as string ?? '').replace(/\.\./g, '').replace(/^\//, '');
-  const full = safeJoin(DOC_ROOT, rel);
+  const full = safeJoin(ROOT, rel);
   if (!full || !fs.existsSync(full)) return res.status(404).send('Not found');
   const ext = path.extname(full).toLowerCase();
   if (!ALLOWED_EXTS.has(ext)) return res.status(403).send('Forbidden');
@@ -190,7 +223,7 @@ router.get('/raw', requireAuth, (req, res) => {
   res.sendFile(full);
 });
 
-// アップロード
+// アップロード（docs のみ）
 const docUpload = makeDocUploader(UPLOAD_DIR);
 
 router.get('/upload', requireAuth, (req, res) => {
@@ -263,7 +296,7 @@ router.post('/upload', requireAuth, (req, res) => {
       <div class="header"><a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a><span class="sep">›</span><a href="${url('/docs')}"> <i class="fas fa-file-alt"></i> ドキュメント</a></div>
       <div class="main">
         <p style="color:#50fa7b;margin-bottom:16px">✅ アップロード完了: ${f.filename}</p>
-        <p><a href="${url('/docs')}?path=uploads/docs" style="color:#8be9fd">アップロードフォルダを開く</a>
+        <p><a href="${url('/docs')}" style="color:#8be9fd">ドキュメント一覧へ</a>
         &nbsp;&nbsp;<a href="${url('/docs/upload')}" style="color:#888">もう一枚</a></p>
       </div>`));
   });
@@ -272,7 +305,7 @@ router.post('/upload', requireAuth, (req, res) => {
 export const meta = {
   name: 'Document Viewer',
   icon: 'fas fa-file-alt',
-  desc: 'Markdown・テキスト・設定ファイルを表示＆アップロード',
+  desc: 'Markdown・テキスト・設計書を表示。下書きタブで drafts/ も参照可。',
   layer: 'core' as const,
   url: '/docs',
 };
