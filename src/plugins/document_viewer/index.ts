@@ -133,7 +133,7 @@ router.get('/', requireAuth, (req, res) => {
              onmouseleave="this.style.color='#555';this.style.borderColor='#333'">🗑</button>
          </form>`
       : '';
-    return `<li style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #1a1a2e">
+    return `<li style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #0f3460">
       <a href="${href}" ${linkAttr} style="display:flex;align-items:center;gap:12px;flex:1;color:#e0e0e0;text-decoration:none">
         ${thumbHtml}
         <span style="font-size:.9em;word-break:break-all">${e.name}${e.isDir ? '/' : ''}${isPdf ? ' <span style="font-size:.72em;color:#888;margin-left:4px">↗</span>' : ''}</span>
