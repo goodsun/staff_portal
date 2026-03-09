@@ -40,18 +40,35 @@
 
 ## Step 3: 画像生成
 
-### 各コマのプロンプト設計
+### セリフ・コマ割りを先に確定する（重要）
+
+画像生成の前に、必ずセリフとコマ割りを日本語で書き出す。
+「絵ありき」ではなく「ストーリーありき」で作ること。
+
+```
+1コマ目: [シーン説明] セリフ:「○○」
+2コマ目: [シーン説明] セリフ:「○○」
+3コマ目: [シーン説明] セリフ:「○○」
+4コマ目: [シーン説明] セリフ:「○○」
+```
+
+### プロンプト設計のコツ
+
+**日本語セリフはプロンプトに直接書く。** Geminiは日本語テキストを吹き出し内に描画できる。
 
 ```
 4-panel manga comic strip, vertical layout, warm beige-toned soft manga style.
-Panel 1: [1コマ目の内容]
-Panel 2: [2コマ目の内容]
-Panel 3: [3コマ目の内容]
-Panel 4: [4コマ目の内容]
-Character A is Akiko: young French-Japanese woman, light brown long hair, casual clothes.
-Japanese text for title: 「備前焼のヒミツ vol.XX「テーマ」」
-Clean linework, expressive characters, speech bubbles with Japanese text.
+Each panel has speech bubbles with EXACT Japanese text written inside clearly and legibly.
+Panel 1 (top): [シーン説明]. Speech bubble: 「セリフ」
+Panel 2: [シーン説明]. Speech bubble: 「セリフ」
+Panel 3: [シーン説明]. Speech bubble: 「セリフ」
+Panel 4 (bottom): [シーン説明]. Speech bubble: 「セリフ」
+The Japanese text inside speech bubbles must be clearly readable.
 ```
+
+> ✅ `must be clearly readable` を入れると文字が丁寧に描かれる  
+> ✅ `EXACT Japanese text` と強調すると指定セリフが優先される  
+> ✅ `Panel 1 (top)` / `Panel 4 (bottom)` でコマ位置を明示する
 
 ### API呼び出し例
 
@@ -64,19 +81,22 @@ curl -s -X POST ${BASE_URL}/image_gen/api/generate \
   -H "X-API-Key: ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt": "4-panel manga comic strip, vertical layout, warm beige-toned soft manga style. Panel 1: Akiko picks up a Bizen-yaki cup and notices grey spots. Panel 2: She asks her sensei about it. Panel 3: Sensei explains that ash from the kiln falls and becomes natural glaze. Panel 4: Akiko is amazed, text reads 備前焼のヒミツ vol.19「胡麻」. Clean linework, speech bubbles with Japanese text.",
+    "prompt": "4-panel manga comic strip, vertical layout, warm beige-toned soft manga style. Each panel has speech bubbles with EXACT Japanese text written inside clearly and legibly. Panel 1 (top): Akiko picks up a Bizen-yaki cup and notices grey spots, speech bubble: 「なんでこんな模様が…？」. Panel 2: She asks her sensei, speech bubble: 「先生、これって何ですか？」. Panel 3: Sensei explains with a smile, speech bubble: 「窯の灰が降り積もって自然にできる釉薬なんだよ」. Panel 4 (bottom): Akiko amazed, title text visible: 備前焼のヒミツ vol.XX「胡麻」, speech bubble: 「自然がつくる模様なんですね…！」. The Japanese text inside speech bubbles must be clearly readable.",
     "cast_refs": "[{\"id\":\"akiko\",\"style\":\"4koma\",\"label\":\"A\"}]",
     "gen_model": "gemini-3-pro-image-preview",
-    "gen_aspect": "3:4"
+    "gen_aspect": "9:16"
   }'
 ```
 
+> ⚠️ アスペクト比は `9:16` 推奨（縦長4コマに最適）
+
 ### 生成後のチェック項目
 
-- [ ] タイトルの日本語テキストが正確に入っているか
+- [ ] 各コマのセリフが正確に読めるか
+- [ ] タイトル「備前焼のヒミツ vol.XX」が入っているか
 - [ ] 彰子の顔・キャラが一貫しているか
-- [ ] コマの順番が正しいか（左上→右上→左下→右下 or 縦読み）
-- [ ] 文字が読めるサイズか
+- [ ] コマの順番が正しいか（上→下）
+- [ ] 文字が潰れていないか（小さすぎないか）
 
 ---
 
