@@ -24,21 +24,50 @@ noteの記事投稿時にアイキャッチ画像を**labo-portal image_gen API*
 
 ---
 
+## 環境変数
+
+### 必須
+```bash
+export LABO_API_KEY="YOUR_API_KEY"
+```
+
+### 推奨
+```bash
+# 各環境に応じて設定
+export LABO_BASE_URL="https://alice.bon-soleil.com/labo"  # EC2本番
+# または
+export LABO_BASE_URL="http://localhost:8800/mephi"        # Mac Mini本社
+# または
+export LABO_BASE_URL="http://localhost:8800/alice"        # ローカル開発
+```
+
+**設定場所:**
+- `~/.bashrc` または `~/.zshrc` に追記
+- プロジェクト固有の `.env` ファイル
+
+---
+
 ## フロー
 
 ### 1. 記事を書く
 ```bash
-~/documents/drafts/my_article.md
+~/projects/note/drafts/my_article.md
 ```
 
 Markdownで記事を執筆。
 
 ### 2. アイキャッチ生成（labo-portal API）
 
+**環境変数設定:**
+```bash
+export LABO_BASE_URL="https://alice.bon-soleil.com/labo"  # または http://localhost:8800/alice
+export LABO_API_KEY="YOUR_API_KEY"
+```
+
 **基本形（キャラクターなし）:**
 ```bash
-curl -X POST https://alice.bon-soleil.com/labo/image_gen/api/generate \
-  -H "X-API-Key: YOUR_API_KEY" \
+curl -X POST "${LABO_BASE_URL}/image_gen/api/generate" \
+  -H "X-API-Key: ${LABO_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "final_prompt": "A cozy workspace with a laptop, coffee cup, and notebook. Soft morning light. Warm manga art style, nostalgic, soft golden lighting.",
@@ -49,8 +78,8 @@ curl -X POST https://alice.bon-soleil.com/labo/image_gen/api/generate \
 
 **キャラクター付き（Alice）:**
 ```bash
-curl -X POST https://alice.bon-soleil.com/labo/image_gen/api/generate \
-  -H "X-API-Key: YOUR_API_KEY" \
+curl -X POST "${LABO_BASE_URL}/image_gen/api/generate" \
+  -H "X-API-Key: ${LABO_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "final_prompt": "A girl sitting at a wooden desk writing in a notebook. Sunlight streaming through window. Cozy room with books and plants.",
@@ -84,7 +113,7 @@ curl -X POST https://alice.bon-soleil.com/labo/image_gen/api/generate \
 - note API で下書き投稿
 
 ```bash
-python3 ~/scripts/note/note_publish.py ~/documents/drafts/my_article.md --draft
+python3 ~/projects/note/note_publish.py ~/projects/note/drafts/my_article.md --draft
 ```
 
 ---
@@ -231,7 +260,8 @@ import requests
 import json
 import os
 
-LABO_API_URL = "https://alice.bon-soleil.com/labo/image_gen/api/generate"
+LABO_BASE_URL = os.getenv("LABO_BASE_URL", "http://localhost:8800/alice")
+LABO_API_URL = f"{LABO_BASE_URL}/image_gen/api/generate"
 LABO_API_KEY = os.getenv("LABO_API_KEY")
 
 def generate_eyecatch(prompt, aspect="16:9", character=None):
