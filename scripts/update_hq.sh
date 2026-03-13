@@ -4,7 +4,7 @@
 
 set -e
 
-LABO_DIR="${LABO_DIR:-/Users/teddy/labo_portal}"
+LABO_DIR="${LABO_DIR:-/Users/teddy/projects/labo_portal}"
 SERVICE="com.bonsoleil.labo-hq"
 
 echo "🔄 labo_portal (HQ) を更新中..."
