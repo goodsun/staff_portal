@@ -339,6 +339,26 @@ router.get('/:id/edit', requireAuth, (req, res) => {
   if (!profile) return res.redirect(url('/cast_manager'));
 
   const v = (f: string) => (profile[f] as string) ?? '';
+  const existingImages = listImages(id);
+  
+  // スタイル一覧HTML生成
+  const styles = profile.styles ?? {};
+  const styleRows = Object.entries(styles).map(([key, def]) => {
+    const imageOptions = existingImages.map(img => 
+      `<option value="${img}"${def.image === img ? ' selected' : ''}>${img}</option>`
+    ).join('');
+    const thumbSrc = def.image ? url(`/cast_manager/${id}/img/${def.image}`) : '';
+    return `
+      <div class="style-row" data-key="${key}">
+        <div class="style-thumb" data-src="${thumbSrc}" onclick="showImageModal('${thumbSrc}')" title="クリックで拡大">
+          ${thumbSrc ? `<img src="${thumbSrc}" alt="${key}">` : '<span style="color:#555">📷</span>'}
+        </div>
+        <input type="text" name="style_key[]" value="${key}" placeholder="スタイル名（例: main）" required style="flex:1">
+        <input type="text" name="style_desc[]" value="${def.description ?? ''}" placeholder="説明（例: メイン）" style="flex:2">
+        <select name="style_image[]" required style="flex:1.5" onchange="updateThumb(this)">${imageOptions}</select>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">削除</button>
+      </div>`;
+  }).join('');
 
   const body = `
     ${headerHtml('編集')}
@@ -349,6 +369,7 @@ router.get('/:id/edit', requireAuth, (req, res) => {
       </div>
       <form method="post" action="${url('/cast_manager/' + id + '/edit')}" enctype="multipart/form-data">
         <div class="card" style="display:flex;flex-direction:column;gap:14px">
+          <h3><i class="fas fa-user"></i> 基本情報</h3>
           <div class="grid2">
             <div>
               <label>名前</label>
@@ -382,13 +403,85 @@ router.get('/:id/edit', requireAuth, (req, res) => {
             <input type="file" name="images" accept="image/*" multiple style="color:#888;font-size:.82em;width:100%">
             <p class="hint">既存画像はそのまま保持されます</p>
           </div>
-          <div style="display:flex;gap:12px;margin-top:4px">
-            <button type="submit" class="btn btn-primary">保存</button>
-            <a href="${url('/cast_manager/' + id)}" style="color:#888;text-decoration:none;padding:9px 0">キャンセル</a>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3><i class="fas fa-palette"></i> スタイル管理</h3>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="addStyle()">＋ スタイル追加</button>
           </div>
+          <div>
+            <label>デフォルトスタイル</label>
+            <select name="default_style" style="width:100%;padding:9px 12px;background:#0d1117;border:1px solid #0f3460;border-radius:6px;color:#e0e0e0;font-size:.9em">
+              <option value="">未設定</option>
+              ${Object.keys(styles).map(k => `<option value="${k}"${profile.default_style === k ? ' selected' : ''}>${k}</option>`).join('')}
+            </select>
+          </div>
+          <div id="styles-container" style="display:flex;flex-direction:column;gap:8px">
+            ${styleRows || '<p style="color:#555;font-size:.85em">スタイルが登録されていません</p>'}
+          </div>
+          <input type="hidden" id="existing-images" value='${JSON.stringify(existingImages)}'>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:16px">
+          <button type="submit" class="btn btn-primary">保存</button>
+          <a href="${url('/cast_manager/' + id)}" style="color:#888;text-decoration:none;padding:9px 0">キャンセル</a>
         </div>
       </form>
-    </div>`;
+    </div>
+    <style>
+      .style-row{display:flex;gap:8px;align-items:center;padding:8px;background:#0d1117;border:1px solid #0f3460;border-radius:6px}
+      .style-row input,.style-row select{padding:6px 10px;background:#1a1a2e;border:1px solid #0f3460;border-radius:4px;color:#e0e0e0;font-size:.85em}
+      .style-row select{cursor:pointer}
+      .style-thumb{width:48px;height:48px;border-radius:6px;overflow:hidden;background:#1a1a2e;border:1px solid #0f3460;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:border-color .2s}
+      .style-thumb:hover{border-color:#e94560}
+      .style-thumb img{width:100%;height:100%;object-fit:cover}
+      .image-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;display:none;align-items:center;justify-content:center;cursor:pointer}
+      .image-modal img{max-width:90%;max-height:90%;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+    </style>
+    <div id="imageModal" class="image-modal" onclick="this.style.display='none'">
+      <img id="modalImg" src="" alt="">
+    </div>
+    <script>
+      const baseUrl = '${url('/cast_manager/' + id + '/img/')}';
+      
+      function showImageModal(src) {
+        if (!src) return;
+        document.getElementById('modalImg').src = src;
+        document.getElementById('imageModal').style.display = 'flex';
+      }
+      
+      function updateThumb(select) {
+        const row = select.closest('.style-row');
+        const thumb = row.querySelector('.style-thumb');
+        const filename = select.value;
+        const src = baseUrl + filename;
+        thumb.innerHTML = '<img src="' + src + '" alt="' + filename + '">';
+        thumb.dataset.src = src;
+        thumb.onclick = () => showImageModal(src);
+      }
+      
+      function addStyle() {
+        const container = document.getElementById('styles-container');
+        const images = JSON.parse(document.getElementById('existing-images').value);
+        const options = images.map(img => '<option value="'+img+'">'+img+'</option>').join('');
+        const row = document.createElement('div');
+        row.className = 'style-row';
+        row.innerHTML = '<div class="style-thumb" onclick="showImageModal(baseUrl + this.nextElementSibling.nextElementSibling.nextElementSibling.value)" title="クリックで拡大"><span style="color:#555">📷</span></div>' +
+          '<input type="text" name="style_key[]" placeholder="スタイル名（例: main）" required style="flex:1">' +
+          '<input type="text" name="style_desc[]" placeholder="説明（例: メイン）" style="flex:2">' +
+          '<select name="style_image[]" required style="flex:1.5" onchange="updateThumb(this)">'+options+'</select>' +
+          '<button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">削除</button>';
+        container.appendChild(row);
+        
+        // 初期サムネイル設定
+        if (images.length > 0) {
+          const select = row.querySelector('select');
+          select.value = images[0];
+          updateThumb(select);
+        }
+      }
+    </script>`;
   res.send(layout('編集', body));
 });
 
@@ -400,6 +493,22 @@ router.post('/:id/edit', requireAuth,
     const existing = loadProfile(id);
     if (!existing) return res.redirect(url('/cast_manager'));
 
+    // スタイル情報の解析
+    const styleKeys = Array.isArray(req.body.style_key) ? req.body.style_key : (req.body.style_key ? [req.body.style_key] : []);
+    const styleDescs = Array.isArray(req.body.style_desc) ? req.body.style_desc : (req.body.style_desc ? [req.body.style_desc] : []);
+    const styleImages = Array.isArray(req.body.style_image) ? req.body.style_image : (req.body.style_image ? [req.body.style_image] : []);
+
+    const styles: Record<string, StyleDef> = {};
+    for (let i = 0; i < styleKeys.length; i++) {
+      const key = styleKeys[i]?.trim();
+      if (!key) continue;
+      styles[key] = {
+        description: styleDescs[i] ?? '',
+        image: styleImages[i] ?? '',
+        prompt_features_override: existing.styles?.[key]?.prompt_features_override ?? null,
+      };
+    }
+
     const profile: Profile = {
       ...existing,
       name: req.body.name ?? existing.name,
@@ -408,6 +517,8 @@ router.post('/:id/edit', requireAuth,
       division: req.body.division ?? existing.division,
       character: req.body.character ?? existing.character,
       prompt_features: req.body.prompt_features ?? existing.prompt_features,
+      default_style: req.body.default_style || undefined,
+      styles: Object.keys(styles).length > 0 ? styles : undefined,
       updated_at: new Date().toISOString(),
     };
     saveProfile(id, profile);
