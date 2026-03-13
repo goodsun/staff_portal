@@ -12,7 +12,7 @@ const router = Router();
 const getGeminiKey = () => process.env.GEMINI_API_KEY ?? '';
 const GEN_SCRIPT = path.join(__dirname, 'gen.js');
 const NODE_BIN = process.execPath; // フルパス（launchd環境でもOK）
-const OUT_DIR = `${WS}/data/generated`;
+const OUT_DIR = `${WS}/data/assets/generated`;
 const CASTS_DIR = `${WS}/data/casts`;
 const IMAGE_GEN_DATA = `${WS}/data/presets`;
 const SCENE_DIR = `${WS}/data/scenes`;
