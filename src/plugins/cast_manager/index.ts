@@ -251,28 +251,54 @@ router.get('/:id', requireAuth, (req, res) => {
   if (!profile) return res.redirect(url('/cast_manager'));
 
   const castDir = path.join(CASTS_DIR, id);
-  const images = listImages(id);
+  const allImages = listImages(id);
 
-  // stylesマップ: filename -> スタイル名
-  const styleMap: Record<string, string> = {};
+  // stylesに登録されている画像と未登録画像を分離
+  const styledImages: Array<{file: string, styleKey: string, label: string, exists: boolean}> = [];
+  const unstyledImages: string[] = [...allImages];
+
   if (profile.styles) {
-    for (const [sName, sDef] of Object.entries(profile.styles)) {
-      styleMap[sDef.image] = `${sName}${sDef.description ? ' — ' + sDef.description : ''}`;
+    for (const [sKey, sDef] of Object.entries(profile.styles)) {
+      const imgFile = sDef.image;
+      const exists = allImages.includes(imgFile);
+      const label = `${sKey}${sDef.description ? ' — ' + sDef.description : ''}`;
+      styledImages.push({ file: imgFile, styleKey: sKey, label, exists });
+      
+      // 未登録リストから削除
+      const idx = unstyledImages.indexOf(imgFile);
+      if (idx !== -1) unstyledImages.splice(idx, 1);
     }
   }
 
-  const galleryImgs = images.map(img => {
-    const styleLabel = styleMap[img] || img;
-    return `<img src="${url('/cast_manager/' + id + '/img/' + img)}" alt="${styleLabel}" data-style="${styleLabel}">`;
-  }).join('');
+  // ギャラリー画像HTML生成
+  const galleryImgs = styledImages
+    .filter(s => s.exists)
+    .map(s => `<img src="${url('/cast_manager/' + id + '/img/' + s.file)}" alt="${s.label}" data-style="${s.label}">`)
+    .concat(
+      unstyledImages.map(img => `<img src="${url('/cast_manager/' + id + '/img/' + img)}" alt="${img}" data-style="未分類 — ${img}">`)
+    )
+    .join('');
 
-  const gallery = images.length > 0 ? `
+  // スタイル画像の警告（存在しない場合）
+  const missingImages = styledImages.filter(s => !s.exists);
+  const warnings = missingImages.length > 0
+    ? `<div class="alert alert-err" style="margin-bottom:16px">⚠️ 以下の画像が見つかりません: ${missingImages.map(m => `<code>${m.file}</code> (${m.styleKey})`).join(', ')}</div>`
+    : '';
+
+  const totalImages = styledImages.filter(s => s.exists).length + unstyledImages.length;
+  
+  const gallery = totalImages > 0 ? `
     <div class="gallery">
       ${galleryImgs}
-      ${images.length > 1 ? `<button class="nav nav-prev">‹</button><button class="nav nav-next">›</button>` : ''}
+      ${totalImages > 1 ? `<button class="nav nav-prev">‹</button><button class="nav nav-next">›</button>` : ''}
       <div class="counter"></div>
       <div class="style-label"></div>
     </div>` : `<div style="background:#0d1117;border:1px solid #0f3460;border-radius:8px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:4em">${profile.emoji || '👤'}</div>`;
+  
+  // 未登録画像の情報
+  const unstyledInfo = unstyledImages.length > 0
+    ? `<div class="alert alert-ok" style="margin-top:16px">ℹ️ 未分類画像: ${unstyledImages.length}件 — ${unstyledImages.map(f => `<code>${f}</code>`).join(', ')}</div>`
+    : '';
 
   const personality = profile.personality && Object.keys(profile.personality).length > 0
     ? Object.entries(profile.personality).map(([k, v]) => `<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')
@@ -289,6 +315,7 @@ router.get('/:id', requireAuth, (req, res) => {
         </div>
       </div>
       <div style="margin-bottom:20px">${pathBadge(castDir)}</div>
+      ${warnings}
       <div class="detail-layout">
         <div>${gallery}</div>
         <div class="card" style="display:flex;flex-direction:column;gap:10px">
@@ -300,6 +327,7 @@ router.get('/:id', requireAuth, (req, res) => {
           ${personality ? `<div><span class="info-label" style="display:block;margin-bottom:8px">パーソナリティ</span>${personality}</div>` : ''}
         </div>
       </div>
+      ${unstyledInfo}
     </div>`;
   res.send(layout(profile.name, body));
 });
