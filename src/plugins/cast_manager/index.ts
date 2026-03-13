@@ -11,18 +11,14 @@ const router = Router();
 
 const CASTS_DIR = `${WS}/data/casts`;
 
-// ── multer（アバター画像） ─────────────────────────
+// ── multer ────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, _f, cb) => {
     const dir = path.join(CASTS_DIR, req.params.id);
     cb(null, dir);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const slot = (file.fieldname === 'avatar_main' ? 'avatar'
-      : file.fieldname === 'avatar_sub' ? 'avatar_sub'
-      : 'avatar_official');
-    cb(null, slot + ext);
+    cb(null, file.originalname);
   },
 });
 const upload = multer({
@@ -34,13 +30,31 @@ const upload = multer({
   },
 });
 
-// ── helpers ──────────────────────────────────────
-interface Profile {
-  name: string; display_name: string; role: string;
-  base_prompt: string; style_prompt: string; negative_prompt: string;
-  tags: string[]; avatars: Record<string, string>; updated_at: string;
+// ── Profile型（実際のprofile.jsonに合わせた） ────
+interface StyleDef {
+  description: string;
+  image: string;
+  prompt_features_override?: string | null;
 }
 
+interface Profile {
+  name: string;
+  display_name?: string;
+  emoji?: string;
+  role?: string;
+  division?: string;
+  hire_date?: string;
+  character?: string;
+  prompt_features?: string;
+  default_style?: string;
+  styles?: Record<string, StyleDef>;
+  personality?: Record<string, string>;
+  avatars?: Record<string, string>;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+// ── helpers ──────────────────────────────────────
 function loadProfile(id: string): Profile | null {
   const f = path.join(CASTS_DIR, id, 'profile.json');
   if (!fs.existsSync(f)) return null;
@@ -59,11 +73,25 @@ function listCasts(): Array<{id: string} & Profile> {
     .filter(Boolean) as Array<{id: string} & Profile>;
 }
 
-function castAvatarUrl(id: string, profile: Profile): string {
-  const avatarFile = profile.avatars?.main || 'avatar.jpg';
-  const full = path.join(CASTS_DIR, id, avatarFile);
-  if (fs.existsSync(full)) return url(`/cast_manager/${id}/avatar/${avatarFile}`);
-  return '';
+/** stylesのデフォルト画像、またはフォルダ内の最初の画像を返す */
+function getMainImageFile(id: string, profile: Profile): string | null {
+  const defaultStyle = profile.default_style ?? 'normal';
+  const styleDef = profile.styles?.[defaultStyle];
+  if (styleDef?.image) {
+    const full = path.join(CASTS_DIR, id, styleDef.image);
+    if (fs.existsSync(full)) return styleDef.image;
+  }
+  // fallback: フォルダ内の画像を探す
+  const dir = path.join(CASTS_DIR, id);
+  const imgs = fs.readdirSync(dir).filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f));
+  return imgs[0] ?? null;
+}
+
+/** フォルダ内の全画像ファイル一覧 */
+function listImages(id: string): string[] {
+  const dir = path.join(CASTS_DIR, id);
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f));
 }
 
 function sanitizeId(raw: string): string {
@@ -83,7 +111,7 @@ function layout(title: string, body: string): string {
   .header{background:#16213e;border-bottom:1px solid #0f3460;padding:12px 24px;display:flex;align-items:center;gap:12px}
   .header a{color:#e94560;text-decoration:none;font-size:.9em}
   .sep{color:#555}
-  .main{max-width:900px;margin:0 auto;padding:28px 24px}
+  .main{max-width:960px;margin:0 auto;padding:28px 24px}
   h2{color:#e94560;font-size:1.1em;margin-bottom:20px}
   h3{color:#aaa;font-size:.85em;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}
   .card{background:#16213e;border:1px solid #0f3460;border-radius:8px;padding:20px;margin-bottom:16px}
@@ -98,60 +126,98 @@ function layout(title: string, body: string): string {
   .btn-danger{background:#550010;color:#e94560;border:1px solid #e94560}
   .btn-danger:hover{background:#e94560;color:#fff}
   .btn-sm{padding:5px 12px;font-size:.8em}
-  .cast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+  .cast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
   .cast-card{background:#0d1117;border:1px solid #0f3460;border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .2s}
   .cast-card:hover{border-color:#e94560}
   .cast-card .thumb{width:100%;aspect-ratio:1;background:#16213e;display:flex;align-items:center;justify-content:center;font-size:3em;overflow:hidden}
   .cast-card .thumb img{width:100%;height:100%;object-fit:cover}
-  .cast-card .info{padding:10px}
+  .cast-card .info{padding:10px 10px 4px}
   .cast-card .cname{font-weight:700;font-size:.95em}
   .cast-card .crole{color:#888;font-size:.78em;margin-top:3px}
   .cast-card .actions{display:flex;gap:6px;padding:0 10px 10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  .avatar-preview{width:80px;height:80px;border-radius:8px;object-fit:cover;border:1px solid #0f3460;background:#0d1117}
   .hint{color:#555;font-size:.78em;margin-top:4px}
+  .path-badge{font-size:.75em;color:#555;background:#0d1117;border:1px solid #1a2a4a;border-radius:4px;padding:3px 8px;font-family:monospace;cursor:pointer;user-select:all}
+  .path-badge:hover{color:#8be9fd;border-color:#0f3460}
   .alert{padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:.9em}
   .alert-ok{background:#0a2a0a;border:1px solid #50fa7b;color:#50fa7b}
   .alert-err{background:#2a0a0a;border:1px solid #e94560;color:#e94560}
-  .tag{display:inline-block;background:#0f3460;color:#8be9fd;padding:2px 8px;border-radius:4px;font-size:.75em;margin:2px}
-</style></head><body>${body}</body></html>`;
+  /* 画像ギャラリー */
+  .gallery{position:relative;background:#0d1117;border:1px solid #0f3460;border-radius:8px;overflow:hidden;aspect-ratio:1}
+  .gallery img{width:100%;height:100%;object-fit:contain;display:none}
+  .gallery img.active{display:block}
+  .gallery .nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.6);border:none;color:#fff;font-size:1.4em;padding:8px 12px;cursor:pointer;border-radius:6px}
+  .gallery .nav:hover{background:rgba(233,69,96,.7)}
+  .gallery .nav-prev{left:8px}
+  .gallery .nav-next{right:8px}
+  .gallery .counter{position:absolute;bottom:8px;right:10px;font-size:.75em;color:#aaa;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:10px}
+  .style-label{position:absolute;bottom:8px;left:10px;font-size:.75em;color:#8be9fd;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:10px}
+  .detail-layout{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
+  .info-row{display:flex;gap:8px;margin-bottom:10px;align-items:baseline}
+  .info-label{color:#555;font-size:.8em;min-width:80px}
+  .info-val{color:#e0e0e0;font-size:.9em}
+</style></head>
+<body>${body}
+<script>
+function initGallery(el) {
+  const imgs = el.querySelectorAll('img');
+  let cur = 0;
+  function show(i) {
+    imgs.forEach((img,j) => img.classList.toggle('active', j===i));
+    const counter = el.querySelector('.counter');
+    if(counter) counter.textContent = (i+1) + ' / ' + imgs.length;
+    const label = el.querySelector('.style-label');
+    if(label) label.textContent = imgs[i]?.dataset.style || '';
+  }
+  el.querySelector('.nav-prev')?.addEventListener('click', () => { cur=(cur-1+imgs.length)%imgs.length; show(cur); });
+  el.querySelector('.nav-next')?.addEventListener('click', () => { cur=(cur+1)%imgs.length; show(cur); });
+  show(0);
+}
+document.querySelectorAll('.gallery').forEach(initGallery);
+</script>
+</body></html>`;
 }
 
 function headerHtml(sub?: string): string {
   return `<div class="header">
-    <a href="${url('/')}"> <i class="fas fa-industry"></i> labo-portal</a>
+    <a href="${url('/')}"><i class="fas fa-industry"></i> labo-portal</a>
     <span class="sep">›</span>
-    <a href="${url('/cast_manager')}">  <i class="fas fa-masks-theater"></i> キャスト</a>
+    <a href="${url('/cast_manager')}"><i class="fas fa-masks-theater"></i> キャスト</a>
     ${sub ? `<span class="sep">›</span><span>${sub}</span>` : ''}
   </div>`;
 }
 
-// ── GET: アバター画像配信 ────────────────────────
-router.get('/:id/avatar/:file', requireAuth, (req, res) => {
+function pathBadge(p: string): string {
+  return `<span class="path-badge" title="クリックでコピー" onclick="navigator.clipboard.writeText('${p}').then(()=>this.style.color='#50fa7b').catch(()=>{})">📁 ${p}</span>`;
+}
+
+// ── GET: 画像配信 ─────────────────────────────────
+router.get('/:id/img/:file', requireAuth, (req, res) => {
   const filePath = path.join(CASTS_DIR, req.params.id, req.params.file);
   if (!filePath.startsWith(CASTS_DIR)) return res.status(403).end();
   if (!fs.existsSync(filePath)) return res.status(404).end();
   res.sendFile(filePath);
 });
 
-// ── GET: 一覧 ────────────────────────────────────
+// ── GET: 一覧 ─────────────────────────────────────
 router.get('/', requireAuth, (req, res) => {
   const casts = listCasts();
   const msg = (req.query.msg as string) ?? '';
 
   const cards = casts.map(c => {
-    const thumbUrl = castAvatarUrl(c.id, c);
-    const thumb = thumbUrl
-      ? `<img src="${thumbUrl}" alt="${c.name}">`
-      : `<span>👤</span>`;
+    const mainImg = getMainImageFile(c.id, c);
+    const thumb = mainImg
+      ? `<img src="${url('/cast_manager/' + c.id + '/img/' + mainImg)}" alt="${c.name}">`
+      : `<span>${c.emoji || '👤'}</span>`;
     return `
       <div class="cast-card">
-        <div class="thumb">${thumb}</div>
-        <div class="info">
-          <div class="cname">${c.name}</div>
-          <div class="crole">${c.role}</div>
-        </div>
+        <a href="${url('/cast_manager/' + c.id)}" style="text-decoration:none;color:inherit">
+          <div class="thumb">${thumb}</div>
+          <div class="info">
+            <div class="cname">${c.emoji || ''} ${c.name}</div>
+            <div class="crole">${c.role || c.division || ''}</div>
+          </div>
+        </a>
         <div class="actions">
           <a href="${url('/cast_manager/' + c.id + '/edit')}" class="btn btn-ghost btn-sm" style="flex:1;text-align:center">編集</a>
           <form method="post" action="${url('/cast_manager/' + c.id + '/delete')}"
@@ -165,10 +231,11 @@ router.get('/', requireAuth, (req, res) => {
   const body = `
     ${headerHtml()}
     <div class="main">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <h2><i class="fas fa-masks-theater"></i> キャスト管理</h2>
-        <a href="${url('/cast_manager/new')}" class="btn btn-primary">＋ 新規キャスト</a>
+        <a href="${url('/cast_manager/new')}" class="btn btn-primary">＋ 新規</a>
       </div>
+      <div style="margin-bottom:20px">${pathBadge(CASTS_DIR)}</div>
       ${msg === 'saved' ? '<div class="alert alert-ok">✅ 保存しました</div>' : ''}
       ${msg === 'deleted' ? '<div class="alert alert-ok">✅ 削除しました</div>' : ''}
       <div class="cast-grid">${cards || '<p style="color:#555">キャストがありません</p>'}</div>
@@ -176,87 +243,199 @@ router.get('/', requireAuth, (req, res) => {
   res.send(layout('キャスト管理', body));
 });
 
-// ── フォームHTML（新規/編集共通） ────────────────
-function profileForm(action: string, p?: Partial<Profile>, id?: string): string {
-  const v = (f: keyof Profile) => (p?.[f] ?? '') as string;
-  const tagsStr = Array.isArray(p?.tags) ? p!.tags.join(', ') : '';
+// ── GET: 詳細 ─────────────────────────────────────
+router.get('/:id', requireAuth, (req, res) => {
+  if (req.params.id === 'new') return res.redirect(url('/cast_manager/new'));
+  const id = req.params.id;
+  const profile = loadProfile(id);
+  if (!profile) return res.redirect(url('/cast_manager'));
 
-  // アバタープレビュー
-  const avatarSlots = ['main','sub','official'].map(slot => {
-    const fieldName = `avatar_${slot}`;
-    const label = slot === 'main' ? 'メイン' : slot === 'sub' ? 'サブ' : 'オフィシャル';
-    const existing = id && p?.avatars?.[slot] ? castAvatarUrl(id, p as Profile) : '';
-    const preview = existing ? `<img src="${existing}" class="avatar-preview" style="display:block;margin-bottom:6px">` : '';
-    return `<div>
-      <label>${label}アバター</label>
-      ${preview}
-      <input type="file" name="${fieldName}" accept="image/*" style="color:#888;font-size:.82em;width:100%">
-    </div>`;
+  const castDir = path.join(CASTS_DIR, id);
+  const images = listImages(id);
+
+  // stylesマップ: filename -> スタイル名
+  const styleMap: Record<string, string> = {};
+  if (profile.styles) {
+    for (const [sName, sDef] of Object.entries(profile.styles)) {
+      styleMap[sDef.image] = `${sName}${sDef.description ? ' — ' + sDef.description : ''}`;
+    }
+  }
+
+  const galleryImgs = images.map(img => {
+    const styleLabel = styleMap[img] || img;
+    return `<img src="${url('/cast_manager/' + id + '/img/' + img)}" alt="${styleLabel}" data-style="${styleLabel}">`;
   }).join('');
 
-  return `
-    <form method="post" action="${url(action)}" enctype="multipart/form-data">
-      <div class="card" style="display:flex;flex-direction:column;gap:14px">
-        <div class="grid2">
-          <div>
-            <label>ID（英数小文字・ハイフン）${!id ? '<span style="color:#e94560">*</span>' : ''}</label>
-            <input type="text" name="id" value="${id ?? ''}" placeholder="mephi" ${id ? 'readonly style="color:#555"' : 'required'}>
-            <p class="hint">一度決めたIDは変更不可</p>
-          </div>
-          <div>
-            <label>名前 <span style="color:#e94560">*</span></label>
-            <input type="text" name="name" value="${v('name')}" required>
-          </div>
-        </div>
-        <div class="grid2">
-          <div>
-            <label>フルネーム</label>
-            <input type="text" name="display_name" value="${v('display_name')}">
-          </div>
-          <div>
-            <label>役割・肩書き</label>
-            <input type="text" name="role" value="${v('role')}">
-          </div>
-        </div>
-        <div>
-          <label>ベースプロンプト <span style="color:#e94560">*</span></label>
-          <textarea name="base_prompt" rows="3" required>${v('base_prompt')}</textarea>
-          <p class="hint">キャラクターの外見・特徴を英語で</p>
-        </div>
-        <div>
-          <label>スタイルプロンプト</label>
-          <textarea name="style_prompt" rows="2">${v('style_prompt')}</textarea>
-          <p class="hint">画風・照明・雰囲気など</p>
-        </div>
-        <div>
-          <label>ネガティブプロンプト</label>
-          <textarea name="negative_prompt" rows="2">${v('negative_prompt')}</textarea>
-        </div>
-        <div>
-          <label>タグ（カンマ区切り）</label>
-          <input type="text" name="tags" value="${tagsStr}" placeholder="character, bon-soleil">
-        </div>
-        <div>
-          <h3 style="margin-bottom:12px">アバター画像</h3>
-          <div class="grid3">${avatarSlots}</div>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:4px">
-          <button type="submit" class="btn btn-primary">保存</button>
-          <a href="${url('/cast_manager')}" style="color:#888;text-decoration:none;padding:9px 0">キャンセル</a>
+  const gallery = images.length > 0 ? `
+    <div class="gallery">
+      ${galleryImgs}
+      ${images.length > 1 ? `<button class="nav nav-prev">‹</button><button class="nav nav-next">›</button>` : ''}
+      <div class="counter"></div>
+      <div class="style-label"></div>
+    </div>` : `<div style="background:#0d1117;border:1px solid #0f3460;border-radius:8px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:4em">${profile.emoji || '👤'}</div>`;
+
+  const personality = profile.personality && Object.keys(profile.personality).length > 0
+    ? Object.entries(profile.personality).map(([k, v]) => `<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')
+    : '';
+
+  const body = `
+    ${headerHtml(profile.name)}
+    <div class="main">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2>${profile.emoji || '👤'} ${profile.name}</h2>
+        <div style="display:flex;gap:8px">
+          <a href="${url('/cast_manager/' + id + '/edit')}" class="btn btn-ghost btn-sm"><i class="fas fa-edit"></i> 編集</a>
+          <a href="${url('/cast_manager')}" class="btn btn-ghost btn-sm">← 一覧</a>
         </div>
       </div>
-    </form>`;
-}
+      <div style="margin-bottom:20px">${pathBadge(castDir)}</div>
+      <div class="detail-layout">
+        <div>${gallery}</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:10px">
+          <div class="info-row"><span class="info-label">役割</span><span class="info-val">${profile.role || '—'}</span></div>
+          <div class="info-row"><span class="info-label">部署</span><span class="info-val">${profile.division || '—'}</span></div>
+          <div class="info-row"><span class="info-label">入社日</span><span class="info-val">${profile.hire_date || '—'}</span></div>
+          ${profile.character ? `<div><span class="info-label" style="display:block;margin-bottom:4px">キャラクター</span><p style="font-size:.85em;line-height:1.6;color:#ccc">${profile.character}</p></div>` : ''}
+          ${profile.prompt_features ? `<div><span class="info-label" style="display:block;margin-bottom:4px">プロンプト特徴</span><p style="font-size:.8em;line-height:1.5;color:#888;font-family:monospace">${profile.prompt_features}</p></div>` : ''}
+          ${personality ? `<div><span class="info-label" style="display:block;margin-bottom:8px">パーソナリティ</span>${personality}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  res.send(layout(profile.name, body));
+});
 
-// ── GET: 新規作成フォーム ────────────────────────
+// ── GET: 編集フォーム ─────────────────────────────
+router.get('/:id/edit', requireAuth, (req, res) => {
+  const id = req.params.id;
+  const profile = loadProfile(id);
+  if (!profile) return res.redirect(url('/cast_manager'));
+
+  const v = (f: string) => (profile[f] as string) ?? '';
+
+  const body = `
+    ${headerHtml('編集')}
+    <div class="main">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2><i class="fas fa-edit"></i> ${profile.name} を編集</h2>
+        <div style="margin-bottom:0">${pathBadge(path.join(CASTS_DIR, id))}</div>
+      </div>
+      <form method="post" action="${url('/cast_manager/' + id + '/edit')}" enctype="multipart/form-data">
+        <div class="card" style="display:flex;flex-direction:column;gap:14px">
+          <div class="grid2">
+            <div>
+              <label>名前</label>
+              <input type="text" name="name" value="${v('name')}" required>
+            </div>
+            <div>
+              <label>絵文字</label>
+              <input type="text" name="emoji" value="${v('emoji')}" placeholder="😈">
+            </div>
+          </div>
+          <div class="grid2">
+            <div>
+              <label>役割・肩書き</label>
+              <input type="text" name="role" value="${v('role')}">
+            </div>
+            <div>
+              <label>部署</label>
+              <input type="text" name="division" value="${v('division')}">
+            </div>
+          </div>
+          <div>
+            <label>キャラクター説明</label>
+            <textarea name="character" rows="3">${v('character')}</textarea>
+          </div>
+          <div>
+            <label>プロンプト特徴（英語）</label>
+            <textarea name="prompt_features" rows="2">${v('prompt_features')}</textarea>
+          </div>
+          <div>
+            <label>画像を追加（複数可）</label>
+            <input type="file" name="images" accept="image/*" multiple style="color:#888;font-size:.82em;width:100%">
+            <p class="hint">既存画像はそのまま保持されます</p>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:4px">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="${url('/cast_manager/' + id)}" style="color:#888;text-decoration:none;padding:9px 0">キャンセル</a>
+          </div>
+        </div>
+      </form>
+    </div>`;
+  res.send(layout('編集', body));
+});
+
+// ── POST: 編集保存 ────────────────────────────────
+router.post('/:id/edit', requireAuth,
+  upload.array('images') as any,
+  (req, res) => {
+    const id = req.params.id;
+    const existing = loadProfile(id);
+    if (!existing) return res.redirect(url('/cast_manager'));
+
+    const profile: Profile = {
+      ...existing,
+      name: req.body.name ?? existing.name,
+      emoji: req.body.emoji ?? existing.emoji,
+      role: req.body.role ?? existing.role,
+      division: req.body.division ?? existing.division,
+      character: req.body.character ?? existing.character,
+      prompt_features: req.body.prompt_features ?? existing.prompt_features,
+      updated_at: new Date().toISOString(),
+    };
+    saveProfile(id, profile);
+    res.redirect(url('/cast_manager/' + id + '?msg=saved'));
+  });
+
+// ── GET: 新規作成フォーム ─────────────────────────
 router.get('/new', requireAuth, (_req, res) => {
-  const body = `${headerHtml('新規キャスト')}<div class="main"><h2>👤 新規キャスト</h2>${profileForm('/cast_manager/new')}</div>`;
+  const body = `
+    ${headerHtml('新規キャスト')}
+    <div class="main">
+      <h2>👤 新規キャスト</h2>
+      <form method="post" action="${url('/cast_manager/new')}" enctype="multipart/form-data">
+        <div class="card" style="display:flex;flex-direction:column;gap:14px">
+          <div class="grid2">
+            <div>
+              <label>ID（英数小文字・ハイフン）<span style="color:#e94560">*</span></label>
+              <input type="text" name="id" placeholder="mephi" required>
+              <p class="hint">一度決めたIDは変更不可</p>
+            </div>
+            <div>
+              <label>名前 <span style="color:#e94560">*</span></label>
+              <input type="text" name="name" required>
+            </div>
+          </div>
+          <div class="grid2">
+            <div>
+              <label>役割</label>
+              <input type="text" name="role">
+            </div>
+            <div>
+              <label>絵文字</label>
+              <input type="text" name="emoji" placeholder="👤">
+            </div>
+          </div>
+          <div>
+            <label>キャラクター説明</label>
+            <textarea name="character" rows="3"></textarea>
+          </div>
+          <div>
+            <label>画像（複数可）</label>
+            <input type="file" name="images" accept="image/*" multiple style="color:#888;font-size:.82em;width:100%">
+          </div>
+          <div style="display:flex;gap:12px;margin-top:4px">
+            <button type="submit" class="btn btn-primary">作成</button>
+            <a href="${url('/cast_manager')}" style="color:#888;text-decoration:none;padding:9px 0">キャンセル</a>
+          </div>
+        </div>
+      </form>
+    </div>`;
   res.send(layout('新規キャスト', body));
 });
 
-// ── POST: 新規作成 ───────────────────────────────
+// ── POST: 新規作成 ────────────────────────────────
 router.post('/new', requireAuth,
-  upload.fields([{ name: 'avatar_main' }, { name: 'avatar_sub' }, { name: 'avatar_official' }]) as any,
+  upload.array('images') as any,
   (req, res) => {
     const id = sanitizeId(req.body.id ?? '');
     if (!id) return res.redirect(url('/cast_manager/new'));
@@ -264,66 +443,18 @@ router.post('/new', requireAuth,
     const dir = path.join(CASTS_DIR, id);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    const avatars: Record<string, string> = {};
-    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-    if (files?.avatar_main?.[0]) avatars.main = files.avatar_main[0].filename;
-    if (files?.avatar_sub?.[0]) avatars.sub = files.avatar_sub[0].filename;
-    if (files?.avatar_official?.[0]) avatars.official = files.avatar_official[0].filename;
-
     const profile: Profile = {
       name: req.body.name ?? id,
-      display_name: req.body.display_name ?? '',
+      emoji: req.body.emoji ?? '',
       role: req.body.role ?? '',
-      base_prompt: req.body.base_prompt ?? '',
-      style_prompt: req.body.style_prompt ?? '',
-      negative_prompt: req.body.negative_prompt ?? '',
-      tags: (req.body.tags ?? '').split(',').map((t: string) => t.trim()).filter(Boolean),
-      avatars,
+      character: req.body.character ?? '',
       updated_at: new Date().toISOString(),
     };
     saveProfile(id, profile);
     res.redirect(url('/cast_manager?msg=saved'));
   });
 
-// ── GET: 編集フォーム ────────────────────────────
-router.get('/:id/edit', requireAuth, (req, res) => {
-  const profile = loadProfile(req.params.id);
-  if (!profile) return res.redirect(url('/cast_manager'));
-  const body = `${headerHtml('編集')}<div class="main"><h2> <i class="fas fa-edit"></i> ${profile.name} を編集</h2>${profileForm('/cast_manager/' + req.params.id + '/edit', profile, req.params.id)}</div>`;
-  res.send(layout('編集', body));
-});
-
-// ── POST: 編集保存 ───────────────────────────────
-router.post('/:id/edit', requireAuth,
-  upload.fields([{ name: 'avatar_main' }, { name: 'avatar_sub' }, { name: 'avatar_official' }]) as any,
-  (req, res) => {
-    const id = req.params.id;
-    const existing = loadProfile(id);
-    if (!existing) return res.redirect(url('/cast_manager'));
-
-    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-    const avatars = { ...existing.avatars };
-    if (files?.avatar_main?.[0]) avatars.main = files.avatar_main[0].filename;
-    if (files?.avatar_sub?.[0]) avatars.sub = files.avatar_sub[0].filename;
-    if (files?.avatar_official?.[0]) avatars.official = files.avatar_official[0].filename;
-
-    const profile: Profile = {
-      ...existing,
-      name: req.body.name ?? existing.name,
-      display_name: req.body.display_name ?? '',
-      role: req.body.role ?? '',
-      base_prompt: req.body.base_prompt ?? '',
-      style_prompt: req.body.style_prompt ?? '',
-      negative_prompt: req.body.negative_prompt ?? '',
-      tags: (req.body.tags ?? '').split(',').map((t: string) => t.trim()).filter(Boolean),
-      avatars,
-      updated_at: new Date().toISOString(),
-    };
-    saveProfile(id, profile);
-    res.redirect(url('/cast_manager?msg=saved'));
-  });
-
-// ── POST: 削除 ───────────────────────────────────
+// ── POST: 削除 ────────────────────────────────────
 router.post('/:id/delete', requireAuth, (req, res) => {
   const dir = path.join(CASTS_DIR, req.params.id);
   if (dir.startsWith(CASTS_DIR) && fs.existsSync(dir)) {
@@ -335,7 +466,7 @@ router.post('/:id/delete', requireAuth, (req, res) => {
 export const meta = {
   name: 'キャスト',
   icon: 'fas fa-masks-theater',
-  desc: 'キャラクター管理（画像・プロンプトセット）',
+  desc: 'キャラクター管理（画像ギャラリー・profile.json）',
   layer: 'layer2' as const,
   url: '/cast_manager',
 };
