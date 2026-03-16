@@ -64,9 +64,33 @@ https://corp.bon-soleil.com/labo/image_gen/api/generate
 
 APIキーは各インスタンスの `.env` または `~/.config/labo/api_key` に保管。
 
-### 4. 旧インスタンスのlabo_portalを停止
+### 4. castsの中央管理化
 
-Hetzner / EC2上の個別labo_portalは停止・削除。
+中央labo_portalに `data/casts/` を集約することで、**各インスタンスがcastsを持つ必要がなくなる**。
+
+現状：
+```
+各インスタンス
+└── data/casts/teddy/, mephi/, akiko/ ...  ← 各自がコピーを保持
+```
+
+移行後：
+```
+commons(labo_portal)
+└── data/casts/   ← ここだけが正
+
+各インスタンス
+└── image_gen APIを叩くだけ（casts不要）
+```
+
+**メリット:**
+- キャラ定義を更新したとき、commons側だけ直せば全インスタンスに即反映
+- 新インスタンス追加時にcastsのセットアップ不要
+- キャラの「正」が1箇所に集まり、バージョン管理が明確になる
+
+### 5. 旧インスタンスのlabo_portalを停止
+
+Hetzner / EC2上の個別labo_portalは停止・削除。各インスタンスの `data/casts/` も削除可。
 
 ## 依存・制約
 
